@@ -95,3 +95,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
+
+// WriteJSON and WriteError are exported for use outside this package (e.g. server.go).
+func WriteJSON(w http.ResponseWriter, status int, v any) { writeJSON(w, status, v) }
+func WriteError(w http.ResponseWriter, status int, msg string) { writeError(w, status, msg) }

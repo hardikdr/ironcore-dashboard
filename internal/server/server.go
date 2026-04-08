@@ -8,15 +8,18 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/api"
 	versioned "github.com/ironcore-dev/ironcore/client-go/ironcore/versioned"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 type Server struct {
 	router   *chi.Mux
 	ironcore versioned.Interface
+	k8s      *kubernetes.Clientset
 }
 
-func New(cs versioned.Interface) *Server {
-	s := &Server{ironcore: cs}
+func New(cs versioned.Interface, k8sClient *kubernetes.Clientset) *Server {
+	s := &Server{ironcore: cs, k8s: k8sClient}
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -31,6 +34,20 @@ func New(cs versioned.Interface) *Server {
 		w.Write([]byte("ok"))
 	})
 
+	// Namespace list
+	r.Get("/api/v1/namespaces", func(w http.ResponseWriter, r *http.Request) {
+		list, err := s.k8s.CoreV1().Namespaces().List(r.Context(), metav1.ListOptions{})
+		if err != nil {
+			api.WriteError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		names := make([]string, 0, len(list.Items))
+		for _, ns := range list.Items {
+			names = append(names, ns.Name)
+		}
+		api.WriteJSON(w, http.StatusOK, names)
+	})
+
 	mh := api.NewMachineHandler(cs)
 	r.Get("/api/v1/machineclasses", mh.ListMachineClasses)
 	r.Route("/api/v1/namespaces/{ns}/machines", func(r chi.Router) {
@@ -39,6 +56,23 @@ func New(cs versioned.Interface) *Server {
 		r.Get("/{name}", mh.Get)
 		r.Delete("/{name}", mh.Delete)
 		r.Patch("/{name}/power", mh.PatchPower)
+	})
+
+	vh := api.NewVolumeHandler(cs)
+	nh := api.NewNetworkHandler(cs)
+	vip := api.NewVirtualIPHandler(cs)
+	lb := api.NewLoadBalancerHandler(cs)
+	iph := api.NewIPAMHandler(cs)
+
+	r.Route("/api/v1/namespaces/{ns}", func(r chi.Router) {
+		r.Get("/volumes", vh.List)
+		r.Post("/volumes", vh.Create)
+		r.Delete("/volumes/{name}", vh.Delete)
+		r.Get("/networks", nh.ListNetworks)
+		r.Get("/networkinterfaces", nh.ListNetworkInterfaces)
+		r.Get("/virtualips", vip.List)
+		r.Get("/loadbalancers", lb.List)
+		r.Get("/prefixes", iph.ListPrefixes)
 	})
 
 	s.router = r
