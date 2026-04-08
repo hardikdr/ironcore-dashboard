@@ -6,13 +6,16 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	versioned "github.com/ironcore-dev/ironcore/client-go/ironcore/versioned"
 )
 
 type Server struct {
-	router *chi.Mux
+	router   *chi.Mux
+	ironcore versioned.Interface
 }
 
-func New() *Server {
+func New(cs versioned.Interface) *Server {
+	s := &Server{ironcore: cs}
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -27,7 +30,8 @@ func New() *Server {
 		w.Write([]byte("ok"))
 	})
 
-	return &Server{router: r}
+	s.router = r
+	return s
 }
 
 func (s *Server) Router() *chi.Mux { return s.router }
