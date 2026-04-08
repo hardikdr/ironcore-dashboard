@@ -1,13 +1,22 @@
-.PHONY: build run dev tidy test
+.PHONY: build build-frontend run dev-backend dev-frontend tidy test
 
-build:
+build-frontend:
+	cd frontend && npm install && npm run build
+
+build: build-frontend
 	go build -o bin/ironcore-dashboard ./cmd/server
 
 run:
-	go run ./cmd/server --addr :8080
+	go run ./cmd/server --addr :8080 --kubeconfig $(HOME)/.kube/config
 
-tidy:
-	go mod tidy
+dev-backend:
+	go run ./cmd/server --addr :8080 --kubeconfig $(HOME)/.kube/config
+
+dev-frontend:
+	cd frontend && npm run dev
 
 test:
 	go test ./...
+
+tidy:
+	go mod tidy

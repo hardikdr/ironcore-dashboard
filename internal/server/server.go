@@ -1,6 +1,8 @@
 package server
 
 import (
+	"encoding/json"
+	"io/fs"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -18,9 +20,10 @@ type Server struct {
 	k8s      *kubernetes.Clientset
 }
 
-func New(cs versioned.Interface, k8sClient *kubernetes.Clientset) *Server {
+func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, frontendFS fs.FS) *Server {
 	s := &Server{ironcore: cs, k8s: k8sClient}
 	r := chi.NewRouter()
+
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
@@ -29,25 +32,31 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset) *Server {
 		AllowedHeaders: []string{"Content-Type"},
 	}))
 
+	// Health check
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
 
-	// Namespace list
+	// Namespace list (for project/namespace switcher)
 	r.Get("/api/v1/namespaces", func(w http.ResponseWriter, r *http.Request) {
 		list, err := s.k8s.CoreV1().Namespaces().List(r.Context(), metav1.ListOptions{})
 		if err != nil {
-			api.WriteError(w, http.StatusInternalServerError, err.Error())
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
 		names := make([]string, 0, len(list.Items))
 		for _, ns := range list.Items {
 			names = append(names, ns.Name)
 		}
-		api.WriteJSON(w, http.StatusOK, names)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(names)
 	})
 
+	// Machine routes
 	mh := api.NewMachineHandler(cs)
 	r.Get("/api/v1/machineclasses", mh.ListMachineClasses)
 	r.Route("/api/v1/namespaces/{ns}/machines", func(r chi.Router) {
@@ -58,22 +67,41 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset) *Server {
 		r.Patch("/{name}/power", mh.PatchPower)
 	})
 
+	// Volume routes
 	vh := api.NewVolumeHandler(cs)
+	r.Route("/api/v1/namespaces/{ns}/volumes", func(r chi.Router) {
+		r.Get("/", vh.List)
+		r.Post("/", vh.Create)
+		r.Delete("/{name}", vh.Delete)
+	})
+
+	// Networking routes
 	nh := api.NewNetworkHandler(cs)
 	vip := api.NewVirtualIPHandler(cs)
 	lb := api.NewLoadBalancerHandler(cs)
-	iph := api.NewIPAMHandler(cs)
-
 	r.Route("/api/v1/namespaces/{ns}", func(r chi.Router) {
-		r.Get("/volumes", vh.List)
-		r.Post("/volumes", vh.Create)
-		r.Delete("/volumes/{name}", vh.Delete)
 		r.Get("/networks", nh.ListNetworks)
 		r.Get("/networkinterfaces", nh.ListNetworkInterfaces)
 		r.Get("/virtualips", vip.List)
 		r.Get("/loadbalancers", lb.List)
-		r.Get("/prefixes", iph.ListPrefixes)
 	})
+
+	// IPAM routes
+	iph := api.NewIPAMHandler(cs)
+	r.Get("/api/v1/namespaces/{ns}/prefixes", iph.ListPrefixes)
+
+	// Serve built Vue SPA for all other routes
+	if frontendFS != nil {
+		fileServer := http.FileServer(http.FS(frontendFS))
+		r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+			// SPA fallback: serve index.html for unknown routes so vue-router handles them
+			_, statErr := frontendFS.(fs.StatFS).Stat(r.URL.Path[1:])
+			if statErr != nil {
+				r.URL.Path = "/"
+			}
+			fileServer.ServeHTTP(w, r)
+		})
+	}
 
 	s.router = r
 	return s
