@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/ironcore-dev/ironcore-dashboard/internal/api"
 	versioned "github.com/ironcore-dev/ironcore/client-go/ironcore/versioned"
 )
 
@@ -28,6 +29,16 @@ func New(cs versioned.Interface) *Server {
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
+	})
+
+	mh := api.NewMachineHandler(cs)
+	r.Get("/api/v1/machineclasses", mh.ListMachineClasses)
+	r.Route("/api/v1/namespaces/{ns}/machines", func(r chi.Router) {
+		r.Get("/", mh.List)
+		r.Post("/", mh.Create)
+		r.Get("/{name}", mh.Get)
+		r.Delete("/{name}", mh.Delete)
+		r.Patch("/{name}/power", mh.PatchPower)
 	})
 
 	s.router = r
