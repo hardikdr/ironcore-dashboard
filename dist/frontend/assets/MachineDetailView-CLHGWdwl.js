@@ -1,0 +1,1 @@
+import{_ as a,e as n,w as o,g as s,c,o as r}from"./index-D0e6KEk8.js";const i={};function _(l,e){const t=c("v-container");return r(),n(t,{fluid:"",class:"pa-6"},{default:o(()=>[...e[0]||(e[0]=[s("h1",{class:"text-h5"},"Machine Detail",-1)])]),_:1})}const p=a(i,[["render",_]]);export{p as default};

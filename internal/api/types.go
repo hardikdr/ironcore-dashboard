@@ -72,6 +72,7 @@ type CreateMachineRequest struct {
 	MachineClass string             `json:"machineClass"`
 	Image        string             `json:"image"`
 	NetworkName  string             `json:"networkName"`
+	IP           string             `json:"ip"`
 	Volumes      []VolumeAttachment `json:"volumes"`
 	Power        string             `json:"power"`
 }

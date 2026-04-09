@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	commonv1alpha1     "github.com/ironcore-dev/ironcore/api/common/v1alpha1"
 	computev1alpha1    "github.com/ironcore-dev/ironcore/api/compute/v1alpha1"
 	corev1alpha1       "github.com/ironcore-dev/ironcore/api/core/v1alpha1"
 	networkingv1alpha1 "github.com/ironcore-dev/ironcore/api/networking/v1alpha1"
@@ -77,6 +78,12 @@ func (h *MachineHandler) Create(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	ipStr := req.IP
+	if ipStr == "" {
+		ipStr = "10.0.0.1"
+	}
+	parsedIP := commonv1alpha1.MustParseIP(ipStr)
+
 	machine := &computev1alpha1.Machine{
 		ObjectMeta: metav1.ObjectMeta{Name: req.Name, Namespace: ns},
 		Spec: computev1alpha1.MachineSpec{
@@ -92,6 +99,11 @@ func (h *MachineHandler) Create(w http.ResponseWriter, r *http.Request) {
 								Spec: networkingv1alpha1.NetworkInterfaceSpec{
 									NetworkRef: corev1.LocalObjectReference{Name: req.NetworkName},
 									IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
+									IPs: []networkingv1alpha1.IPSource{
+										{
+											Value: &parsedIP,
+										},
+									},
 								},
 							},
 						},

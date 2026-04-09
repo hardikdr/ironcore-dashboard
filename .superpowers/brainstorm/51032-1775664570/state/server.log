@@ -1,0 +1,6 @@
+{"type":"server-started","port":59266,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:59266","screen_dir":"/Users/i331134/go/src/github.com/ironcore-dev/dashboard-workspace/ironcore-dashboard/.superpowers/brainstorm/51032-1775664570/content","state_dir":"/Users/i331134/go/src/github.com/ironcore-dev/dashboard-workspace/ironcore-dashboard/.superpowers/brainstorm/51032-1775664570/state"}
+{"type":"screen-added","file":"/Users/i331134/go/src/github.com/ironcore-dev/dashboard-workspace/ironcore-dashboard/.superpowers/brainstorm/51032-1775664570/content/mockup-v3.html"}
+{"type":"screen-added","file":"/Users/i331134/go/src/github.com/ironcore-dev/dashboard-workspace/ironcore-dashboard/.superpowers/brainstorm/51032-1775664570/content/layout-b-light.html"}
+{"type":"screen-added","file":"/Users/i331134/go/src/github.com/ironcore-dev/dashboard-workspace/ironcore-dashboard/.superpowers/brainstorm/51032-1775664570/content/waiting-1.html"}
+{"type":"screen-added","file":"/Users/i331134/go/src/github.com/ironcore-dev/dashboard-workspace/ironcore-dashboard/.superpowers/brainstorm/51032-1775664570/content/dashboard-v4.html"}
+{"type":"server-stopped","reason":"idle timeout"}
