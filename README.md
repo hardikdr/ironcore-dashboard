@@ -49,14 +49,6 @@ TypeScript, Vue 3, Vuetify 3, Pinia, Vue Router, Axios. Built with Vite, output 
 - Node.js 18+
 - Access to a Kubernetes cluster with IronCore installed
 
-> **Note:** This module uses a `replace` directive in `go.mod` pointing to a local checkout of `../ironcore`. You need both repos checked out as siblings:
-> ```
-> workspace/
-> ├── ironcore/
-> └── ironcore-dashboard/
-> ```
-> Clone IronCore: `git clone https://github.com/ironcore-dev/ironcore ../ironcore`
-
 ## Testing with ironcore-in-a-box
 
 [ironcore-in-a-box](https://github.com/ironcore-dev/ironcore-in-a-box) provides a local Kubernetes cluster with IronCore pre-installed — the fastest way to try the dashboard.

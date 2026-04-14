@@ -2,12 +2,10 @@ module github.com/ironcore-dev/ironcore-dashboard
 
 go 1.25.6
 
-replace github.com/ironcore-dev/ironcore => ../ironcore
-
 require (
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-chi/cors v1.2.2
-	github.com/ironcore-dev/ironcore v0.0.0-00010101000000-000000000000
+	github.com/ironcore-dev/ironcore v0.3.0
 	k8s.io/api v0.35.3
 	k8s.io/apimachinery v0.35.3
 	k8s.io/client-go v0.35.3
