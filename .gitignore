@@ -1,0 +1,44 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Go coverage output
+*.out
+
+# Go vendor directory
+vendor/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+dist/
+
+# Editor and IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kubernetes local config
+apiserver.local.config/
+default.etcd/
+
+# AI tooling / local agent workspaces (not for public consumption)
+.agents/
+.claude/
+.superpowers/
+.cursor/
+.gemini/
+docs/superpowers/
