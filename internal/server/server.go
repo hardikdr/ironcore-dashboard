@@ -69,9 +69,12 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, frontendFS fs.
 
 	// Volume routes
 	vh := api.NewVolumeHandler(cs)
+	vch := api.NewVolumeClassHandler(cs)
+	r.Get("/api/v1/volumeclasses", vch.List)
 	r.Route("/api/v1/namespaces/{ns}/volumes", func(r chi.Router) {
 		r.Get("/", vh.List)
 		r.Post("/", vh.Create)
+		r.Get("/{name}", vh.Get)
 		r.Delete("/{name}", vh.Delete)
 	})
 
@@ -79,16 +82,34 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, frontendFS fs.
 	nh := api.NewNetworkHandler(cs)
 	vip := api.NewVirtualIPHandler(cs)
 	lb := api.NewLoadBalancerHandler(cs)
-	r.Route("/api/v1/namespaces/{ns}", func(r chi.Router) {
-		r.Get("/networks", nh.ListNetworks)
-		r.Get("/networkinterfaces", nh.ListNetworkInterfaces)
-		r.Get("/virtualips", vip.List)
-		r.Get("/loadbalancers", lb.List)
+	r.Route("/api/v1/namespaces/{ns}/networks", func(r chi.Router) {
+		r.Get("/", nh.ListNetworks)
+		r.Post("/", nh.CreateNetwork)
+		r.Get("/{name}", nh.GetNetwork)
+		r.Delete("/{name}", nh.DeleteNetwork)
+	})
+	r.Get("/api/v1/namespaces/{ns}/networkinterfaces", nh.ListNetworkInterfaces)
+	r.Route("/api/v1/namespaces/{ns}/virtualips", func(r chi.Router) {
+		r.Get("/", vip.List)
+		r.Post("/", vip.Create)
+		r.Get("/{name}", vip.Get)
+		r.Delete("/{name}", vip.Delete)
+	})
+	r.Route("/api/v1/namespaces/{ns}/loadbalancers", func(r chi.Router) {
+		r.Get("/", lb.List)
+		r.Post("/", lb.Create)
+		r.Get("/{name}", lb.Get)
+		r.Delete("/{name}", lb.Delete)
 	})
 
 	// IPAM routes
 	iph := api.NewIPAMHandler(cs)
-	r.Get("/api/v1/namespaces/{ns}/prefixes", iph.ListPrefixes)
+	r.Route("/api/v1/namespaces/{ns}/prefixes", func(r chi.Router) {
+		r.Get("/", iph.ListPrefixes)
+		r.Post("/", iph.CreatePrefix)
+		r.Get("/{name}", iph.GetPrefix)
+		r.Delete("/{name}", iph.DeletePrefix)
+	})
 
 	// Serve built Vue SPA for all other routes
 	if frontendFS != nil {
