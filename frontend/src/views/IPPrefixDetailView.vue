@@ -13,6 +13,7 @@
     </div>
 
     <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4" />
+    <v-alert v-if="loadError" type="error" class="mb-4">{{ loadError }}</v-alert>
 
     <v-row v-if="detail">
       <v-col cols="12" md="6">
@@ -50,6 +51,7 @@
       <v-card>
         <v-card-title>Delete "{{ name }}"?</v-card-title>
         <v-card-text>This action cannot be undone. The IP prefix will be permanently deleted.</v-card-text>
+        <v-alert v-if="deleteError" type="error" class="mx-4 mb-2">{{ deleteError }}</v-alert>
         <v-card-actions>
           <v-spacer />
           <v-btn variant="outlined" @click="deleteDialog = false">Cancel</v-btn>
@@ -75,17 +77,27 @@ const detail  = ref<PrefixDetail | null>(null)
 const loading = ref(true)
 const deleteDialog = ref(false)
 const deleting     = ref(false)
+const loadError    = ref<string | null>(null)
+const deleteError  = ref<string | null>(null)
 
 onMounted(async () => {
-  try { detail.value = await api.prefixes.get(nsStore.active, name) }
-  finally { loading.value = false }
+  try {
+    detail.value = await api.prefixes.get(nsStore.active, name)
+  } catch (e: unknown) {
+    loadError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    loading.value = false
+  }
 })
 
 async function doDelete() {
   deleting.value = true
+  deleteError.value = null
   try {
     await api.prefixes.delete(nsStore.active, name)
     router.push('/prefixes')
+  } catch (e: unknown) {
+    deleteError.value = e instanceof Error ? e.message : String(e)
   } finally {
     deleting.value = false
   }

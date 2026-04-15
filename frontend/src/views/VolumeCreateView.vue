@@ -61,13 +61,14 @@
             <v-switch v-model="form.encryptionEnabled" label="Enable encryption" color="primary" hide-details class="mb-3" />
             <v-text-field v-if="form.encryptionEnabled" v-model="form.encryptionSecret"
               label="Secret name" variant="outlined" density="compact"
-              placeholder="e.g. my-encryption-secret" />
+              placeholder="e.g. my-encryption-secret" :error-messages="errors.encryptionSecret" />
           </v-card-text>
         </v-card>
 
+        <v-alert v-if="fetchError" type="warning" class="mb-4">Could not load volume classes: {{ fetchError }}</v-alert>
         <v-alert v-if="submitError" type="error" class="mb-4" closable @click:close="submitError = ''">{{ submitError }}</v-alert>
         <div class="d-flex ga-3">
-          <v-btn color="primary" :loading="submitting" size="large" @click="submit">Create Volume</v-btn>
+          <v-btn color="primary" :loading="submitting" :disabled="submitting" size="large" @click="submit">Create Volume</v-btn>
           <v-btn variant="outlined" size="large" :to="{ path: '/volumes' }">Cancel</v-btn>
         </div>
       </div>
@@ -98,7 +99,7 @@
           </v-list-item>
         </v-list>
         <v-card-actions class="pa-4 pt-2">
-          <v-btn color="primary" block :loading="submitting" @click="submit">Create Volume</v-btn>
+          <v-btn color="primary" block :loading="submitting" :disabled="submitting" @click="submit">Create Volume</v-btn>
         </v-card-actions>
       </v-card>
     </div>
@@ -116,7 +117,8 @@ const nsStore = useNamespaceStore()
 const volumeClasses = ref<VolumeClass[]>([])
 const submitting    = ref(false)
 const submitError   = ref('')
-const errors        = ref<{ name?: string; sizeGiB?: string }>({})
+const fetchError    = ref<string | null>(null)
+const errors        = ref<{ name?: string; sizeGiB?: string; encryptionSecret?: string }>({})
 
 const form = ref({
   name: '', volumeClass: '', sizeGiB: 100,
@@ -128,6 +130,9 @@ async function submit() {
   if (!form.value.name)        { errors.value.name    = 'Required'; return }
   if (!form.value.sizeGiB || form.value.sizeGiB < 1) { errors.value.sizeGiB = 'Must be at least 1 GiB'; return }
   if (!form.value.volumeClass) { submitError.value = 'Select a volume class'; return }
+  if (form.value.encryptionEnabled && !form.value.encryptionSecret) {
+    errors.value.encryptionSecret = 'Required when encryption is enabled'; return
+  }
 
   submitting.value = true; submitError.value = ''
   try {
@@ -146,8 +151,12 @@ async function submit() {
 }
 
 onMounted(async () => {
-  const classes = await api.volumeClasses.list()
-  volumeClasses.value = classes
-  if (classes.length) form.value.volumeClass = classes[0].name
+  try {
+    const classes = await api.volumeClasses.list()
+    volumeClasses.value = classes
+    if (classes.length) form.value.volumeClass = classes[0].name
+  } catch (e: unknown) {
+    fetchError.value = e instanceof Error ? e.message : String(e)
+  }
 })
 </script>

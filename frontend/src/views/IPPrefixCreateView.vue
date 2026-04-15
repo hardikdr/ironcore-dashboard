@@ -52,9 +52,10 @@
           </v-card-text>
         </v-card>
 
+        <v-alert v-if="fetchError" type="warning" class="mb-4">Could not load existing prefixes: {{ fetchError }}</v-alert>
         <v-alert v-if="submitError" type="error" class="mb-4" closable @click:close="submitError = ''">{{ submitError }}</v-alert>
         <div class="d-flex ga-3">
-          <v-btn color="primary" :loading="submitting" size="large" @click="submit">Create IP Prefix</v-btn>
+          <v-btn color="primary" :loading="submitting" :disabled="submitting" size="large" @click="submit">Create IP Prefix</v-btn>
           <v-btn variant="outlined" size="large" :to="{ path: '/prefixes' }">Cancel</v-btn>
         </div>
       </div>
@@ -73,7 +74,7 @@
           <v-list-item><template #title><span class="text-caption text-medium-emphasis">NAMESPACE</span></template><template #subtitle>{{ nsStore.active }}</template></v-list-item>
         </v-list>
         <v-card-actions class="pa-4 pt-2">
-          <v-btn color="primary" block :loading="submitting" @click="submit">Create IP Prefix</v-btn>
+          <v-btn color="primary" block :loading="submitting" :disabled="submitting" @click="submit">Create IP Prefix</v-btn>
         </v-card-actions>
       </v-card>
     </div>
@@ -91,6 +92,7 @@ const nsStore = useNamespaceStore()
 const existingPrefixes = ref<Prefix[]>([])
 const submitting  = ref(false)
 const submitError = ref('')
+const fetchError  = ref<string | null>(null)
 const errors      = ref<{ name?: string; prefix?: string; prefixLength?: string }>({})
 
 const form = ref({
@@ -129,6 +131,10 @@ async function submit() {
 }
 
 onMounted(async () => {
-  existingPrefixes.value = await api.prefixes.list(nsStore.active)
+  try {
+    existingPrefixes.value = await api.prefixes.list(nsStore.active)
+  } catch (e: unknown) {
+    fetchError.value = e instanceof Error ? e.message : String(e)
+  }
 })
 </script>

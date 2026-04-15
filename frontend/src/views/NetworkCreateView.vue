@@ -21,7 +21,7 @@
 
         <v-alert v-if="submitError" type="error" class="mb-4" closable @click:close="submitError = ''">{{ submitError }}</v-alert>
         <div class="d-flex ga-3">
-          <v-btn color="primary" :loading="submitting" size="large" @click="submit">Create Network</v-btn>
+          <v-btn color="primary" :loading="submitting" :disabled="submitting" size="large" @click="submit">Create Network</v-btn>
           <v-btn variant="outlined" size="large" :to="{ path: '/networks' }">Cancel</v-btn>
         </div>
       </div>
@@ -40,7 +40,7 @@
           </v-list-item>
         </v-list>
         <v-card-actions class="pa-4 pt-2">
-          <v-btn color="primary" block :loading="submitting" @click="submit">Create Network</v-btn>
+          <v-btn color="primary" block :loading="submitting" :disabled="submitting" @click="submit">Create Network</v-btn>
         </v-card-actions>
       </v-card>
     </div>
