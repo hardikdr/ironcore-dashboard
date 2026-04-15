@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { api, type Volume } from '@/api/client'
+import { api, type Volume, type VolumeDetail, type CreateVolumeRequest } from '@/api/client'
 import { useNamespaceStore } from './namespace'
 
 export const useVolumesStore = defineStore('volumes', () => {
@@ -21,10 +21,19 @@ export const useVolumesStore = defineStore('volumes', () => {
     }
   }
 
+  async function get(name: string): Promise<VolumeDetail> {
+    return api.volumes.get(useNamespaceStore().active, name)
+  }
+
+  async function create(body: CreateVolumeRequest) {
+    await api.volumes.create(useNamespaceStore().active, body)
+    await load()
+  }
+
   async function deleteVolume(name: string) {
     await api.volumes.delete(useNamespaceStore().active, name)
     await load()
   }
 
-  return { items, loading, error, load, deleteVolume }
+  return { items, loading, error, load, get, create, deleteVolume }
 })
