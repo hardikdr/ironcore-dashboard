@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { api, type Network, type NetworkDetail } from '@/api/client'
+import { api, type Network, type NetworkDetail, type CreateNetworkRequest } from '@/api/client'
 import { useNamespaceStore } from './namespace'
 
 export const useNetworksStore = defineStore('networks', () => {
@@ -10,17 +10,22 @@ export const useNetworksStore = defineStore('networks', () => {
 
   async function load() {
     const ns = useNamespaceStore().active
-    loading.value = true; error.value = null
-    try { items.value = await api.networks.list(ns) }
-    catch (e: any) { error.value = e.message }
-    finally { loading.value = false }
+    loading.value = true
+    error.value   = null
+    try {
+      items.value = await api.networks.list(ns)
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      loading.value = false
+    }
   }
 
   async function get(name: string): Promise<NetworkDetail> {
     return api.networks.get(useNamespaceStore().active, name)
   }
 
-  async function create(body: { name: string }) {
+  async function create(body: CreateNetworkRequest) {
     await api.networks.create(useNamespaceStore().active, body)
     await load()
   }

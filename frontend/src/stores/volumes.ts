@@ -14,8 +14,8 @@ export const useVolumesStore = defineStore('volumes', () => {
     error.value   = null
     try {
       items.value = await api.volumes.list(ns)
-    } catch (e: any) {
-      error.value = e.message
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       loading.value = false
     }

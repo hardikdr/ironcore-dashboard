@@ -10,10 +10,15 @@ export const usePrefixesStore = defineStore('prefixes', () => {
 
   async function load() {
     const ns = useNamespaceStore().active
-    loading.value = true; error.value = null
-    try { items.value = await api.prefixes.list(ns) }
-    catch (e: any) { error.value = e.message }
-    finally { loading.value = false }
+    loading.value = true
+    error.value   = null
+    try {
+      items.value = await api.prefixes.list(ns)
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      loading.value = false
+    }
   }
 
   async function get(name: string): Promise<PrefixDetail> {
