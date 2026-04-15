@@ -87,6 +87,107 @@ type PatchPowerRequest struct {
 	Power string `json:"power"`
 }
 
+type VolumeClassResponse struct {
+	Name    string `json:"name"`
+	Storage string `json:"storage"`
+}
+
+type CreateVolumeRequest struct {
+	Name             string `json:"name"`
+	VolumeClass      string `json:"volumeClass"`
+	SizeGiB          int64  `json:"sizeGiB"`
+	EncryptionSecret string `json:"encryptionSecret,omitempty"`
+}
+
+type VolumeDetailResponse struct {
+	Name         string `json:"name"`
+	Namespace    string `json:"namespace"`
+	VolumeClass  string `json:"volumeClass"`
+	SizeGiB      int64  `json:"sizeGiB"`
+	State        string `json:"state"`
+	VolumeID     string `json:"volumeID"`
+	AccessDriver string `json:"accessDriver"`
+	CreatedAt    string `json:"createdAt"`
+}
+
+type CreateNetworkRequest struct {
+	Name string `json:"name"`
+}
+
+type NetworkPeeringStatus struct {
+	Name  string `json:"name"`
+	State string `json:"state"`
+}
+
+type NetworkDetailResponse struct {
+	Name       string                 `json:"name"`
+	Namespace  string                 `json:"namespace"`
+	State      string                 `json:"state"`
+	ProviderID string                 `json:"providerID"`
+	Peerings   []NetworkPeeringStatus `json:"peerings"`
+	CreatedAt  string                 `json:"createdAt"`
+}
+
+type CreateVirtualIPRequest struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	IPFamily string `json:"ipFamily"`
+}
+
+type VirtualIPDetailResponse struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Type      string `json:"type"`
+	IPFamily  string `json:"ipFamily"`
+	IP        string `json:"ip"`
+	TargetRef string `json:"targetRef"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type LBPort struct {
+	Protocol string `json:"protocol"`
+	Port     int32  `json:"port"`
+	EndPort  int32  `json:"endPort,omitempty"`
+}
+
+type CreateLoadBalancerRequest struct {
+	Name       string   `json:"name"`
+	Type       string   `json:"type"`
+	IPFamilies []string `json:"ipFamilies"`
+	NetworkRef string   `json:"networkRef"`
+	Ports      []LBPort `json:"ports"`
+}
+
+type LoadBalancerDetailResponse struct {
+	Name       string   `json:"name"`
+	Namespace  string   `json:"namespace"`
+	Type       string   `json:"type"`
+	IPFamilies []string `json:"ipFamilies"`
+	NetworkRef string   `json:"networkRef"`
+	Ports      []LBPort `json:"ports"`
+	IPs        []string `json:"ips"`
+	CreatedAt  string   `json:"createdAt"`
+}
+
+type CreatePrefixRequest struct {
+	Name         string `json:"name"`
+	IPFamily     string `json:"ipFamily"`
+	Prefix       string `json:"prefix,omitempty"`
+	PrefixLength int32  `json:"prefixLength,omitempty"`
+	ParentRef    string `json:"parentRef,omitempty"`
+}
+
+type PrefixDetailResponse struct {
+	Name      string   `json:"name"`
+	Namespace string   `json:"namespace"`
+	IPFamily  string   `json:"ipFamily"`
+	Prefix    string   `json:"prefix"`
+	Phase     string   `json:"phase"`
+	ParentRef string   `json:"parentRef"`
+	Used      []string `json:"used"`
+	CreatedAt string   `json:"createdAt"`
+}
+
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
