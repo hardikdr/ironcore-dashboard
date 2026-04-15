@@ -33,23 +33,26 @@ func (h *VolumeHandler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *VolumeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ns := chi.URLParam(r, "ns")
-	var req struct {
-		Name        string `json:"name"`
-		VolumeClass string `json:"volumeClass"`
-		SizeBytes   int64  `json:"sizeBytes"`
-	}
+	var req CreateVolumeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	sizeBytes := req.SizeGiB * 1024 * 1024 * 1024
+	spec := storagev1alpha1.VolumeSpec{
+		VolumeClassRef: &corev1.LocalObjectReference{Name: req.VolumeClass},
+		Resources: corev1alpha1.ResourceList{
+			corev1alpha1.ResourceStorage: *resource.NewQuantity(sizeBytes, resource.BinarySI),
+		},
+	}
+	if req.EncryptionSecret != "" {
+		spec.Encryption = &storagev1alpha1.VolumeEncryption{
+			SecretRef: corev1.LocalObjectReference{Name: req.EncryptionSecret},
+		}
+	}
 	vol := &storagev1alpha1.Volume{
 		ObjectMeta: metav1.ObjectMeta{Name: req.Name, Namespace: ns},
-		Spec: storagev1alpha1.VolumeSpec{
-			VolumeClassRef: &corev1.LocalObjectReference{Name: req.VolumeClass},
-			Resources: corev1alpha1.ResourceList{
-				corev1alpha1.ResourceStorage: *resource.NewQuantity(req.SizeBytes, resource.BinarySI),
-			},
-		},
+		Spec:       spec,
 	}
 	created, err := h.cs.StorageV1alpha1().Volumes(ns).Create(r.Context(), vol, metav1.CreateOptions{})
 	if err != nil {
@@ -66,6 +69,39 @@ func (h *VolumeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *VolumeHandler) Get(w http.ResponseWriter, r *http.Request) {
+	ns, name := chi.URLParam(r, "ns"), chi.URLParam(r, "name")
+	v, err := h.cs.StorageV1alpha1().Volumes(ns).Get(r.Context(), name, metav1.GetOptions{})
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	vc := ""
+	if v.Spec.VolumeClassRef != nil {
+		vc = v.Spec.VolumeClassRef.Name
+	}
+	var sizeGiB int64
+	if q, ok := v.Spec.Resources[corev1alpha1.ResourceStorage]; ok {
+		sizeGiB = q.Value() / (1024 * 1024 * 1024)
+	}
+	volumeID := ""
+	accessDriver := ""
+	if v.Status.Access != nil {
+		volumeID = v.Status.Access.Handle
+		accessDriver = v.Status.Access.Driver
+	}
+	writeJSON(w, http.StatusOK, VolumeDetailResponse{
+		Name:         v.Name,
+		Namespace:    v.Namespace,
+		VolumeClass:  vc,
+		SizeGiB:      sizeGiB,
+		State:        string(v.Status.State),
+		VolumeID:     volumeID,
+		AccessDriver: accessDriver,
+		CreatedAt:    v.CreationTimestamp.UTC().Format("2006-01-02T15:04:05Z"),
+	})
 }
 
 func volumeToResponse(v *storagev1alpha1.Volume) VolumeResponse {
