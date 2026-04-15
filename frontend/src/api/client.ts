@@ -104,7 +104,7 @@ export interface CreateVolumeRequest {
   name: string; volumeClass: string; sizeGiB: number; encryptionSecret?: string
 }
 
-export interface Network { name: string; namespace: string; createdAt: string }
+export interface Network { name: string; namespace: string; state?: string; createdAt: string }
 export interface NetworkDetail {
   name: string; namespace: string; state: string; providerID: string
   peerings: { name: string; state: string }[]; createdAt: string

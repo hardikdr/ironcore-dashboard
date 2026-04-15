@@ -29,7 +29,7 @@
         Virtual IPs
         <v-chip size="x-small" color="primary">{{ items.length }}</v-chip>
       </v-card-title>
-      <v-data-table :headers="headers" :items="items" :loading="loading" density="compact" hover no-data-text="No virtual IPs">
+      <v-data-table :headers="headers" :items="items" :loading="loading" density="compact" hover :no-data-text="loadError ?? 'No virtual IPs'">
         <template #item.name="{ item }">
           <router-link :to="`/virtualips/${item.name}`" class="text-primary text-decoration-none font-weight-medium">{{ item.name }}</router-link>
         </template>
@@ -60,14 +60,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { api, type VirtualIP } from '@/api/client'
-import { useVirtualIPsStore } from '@/stores/virtualips'
 import { useNamespaceStore } from '@/stores/namespace'
 import StatCard from '@/components/StatCard.vue'
 
 const nsStore  = useNamespaceStore()
-const vipStore = useVirtualIPsStore()
 const items    = ref<VirtualIP[]>([])
 const loading  = ref(false)
+const loadError = ref<string | null>(null)
 const deleteDialog = ref(false)
 const deleteTarget = ref('')
 const deleting     = ref(false)
@@ -86,16 +85,28 @@ const headers = [
 
 async function load() {
   loading.value = true
-  items.value   = await api.virtualIPs.list(nsStore.active)
-  loading.value = false
+  loadError.value = null
+  try {
+    items.value = await api.virtualIPs.list(nsStore.active)
+  } catch (e: unknown) {
+    loadError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    loading.value = false
+  }
 }
 
 function confirmDelete(name: string) { deleteTarget.value = name; deleteDialog.value = true }
 async function doDelete() {
   deleting.value = true
-  await vipStore.deleteVirtualIP(deleteTarget.value)
-  deleting.value = false; deleteDialog.value = false
-  await load()
+  try {
+    await api.virtualIPs.delete(nsStore.active, deleteTarget.value)
+    deleteDialog.value = false
+    await load()
+  } catch (e: unknown) {
+    console.error('Delete failed:', e)
+  } finally {
+    deleting.value = false
+  }
 }
 
 onMounted(load)

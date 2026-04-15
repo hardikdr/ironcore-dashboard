@@ -29,7 +29,7 @@
         Load Balancers
         <v-chip size="x-small" color="primary">{{ items.length }}</v-chip>
       </v-card-title>
-      <v-data-table :headers="headers" :items="items" :loading="loading" density="compact" hover no-data-text="No load balancers">
+      <v-data-table :headers="headers" :items="items" :loading="loading" density="compact" hover :no-data-text="loadError ?? 'No load balancers'">
         <template #item.name="{ item }">
           <router-link :to="`/loadbalancers/${item.name}`" class="text-primary text-decoration-none font-weight-medium">{{ item.name }}</router-link>
         </template>
@@ -60,14 +60,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { api, type LoadBalancer } from '@/api/client'
-import { useLoadBalancersStore } from '@/stores/loadbalancers'
 import { useNamespaceStore } from '@/stores/namespace'
 import StatCard from '@/components/StatCard.vue'
 
 const nsStore  = useNamespaceStore()
-const lbStore  = useLoadBalancersStore()
 const items    = ref<LoadBalancer[]>([])
 const loading  = ref(false)
+const loadError = ref<string | null>(null)
 const deleteDialog = ref(false)
 const deleteTarget = ref('')
 const deleting     = ref(false)
@@ -85,16 +84,28 @@ const headers = [
 
 async function load() {
   loading.value = true
-  items.value   = await api.loadBalancers.list(nsStore.active)
-  loading.value = false
+  loadError.value = null
+  try {
+    items.value = await api.loadBalancers.list(nsStore.active)
+  } catch (e: unknown) {
+    loadError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    loading.value = false
+  }
 }
 
 function confirmDelete(name: string) { deleteTarget.value = name; deleteDialog.value = true }
 async function doDelete() {
   deleting.value = true
-  await lbStore.deleteLoadBalancer(deleteTarget.value)
-  deleting.value = false; deleteDialog.value = false
-  await load()
+  try {
+    await api.loadBalancers.delete(nsStore.active, deleteTarget.value)
+    deleteDialog.value = false
+    await load()
+  } catch (e: unknown) {
+    console.error('Delete failed:', e)
+  } finally {
+    deleting.value = false
+  }
 }
 
 onMounted(load)

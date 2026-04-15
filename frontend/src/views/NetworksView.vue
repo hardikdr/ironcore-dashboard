@@ -71,22 +71,21 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { api, type Network, type NetworkInterface } from '@/api/client'
-import { useNetworksStore } from '@/stores/networks'
 import { useNamespaceStore } from '@/stores/namespace'
 import StatusBadge from '@/components/StatusBadge.vue'
 import StatCard from '@/components/StatCard.vue'
 
 const nsStore    = useNamespaceStore()
-const netStore   = useNetworksStore()
 const networks   = ref<Network[]>([])
 const interfaces = ref<NetworkInterface[]>([])
 const loading    = ref(false)
+const loadError  = ref<string | null>(null)
 const deleteDialog = ref(false)
 const deleteTarget = ref('')
 const deleting     = ref(false)
 
-const availableCount = computed(() => networks.value.filter(n => (n as any).state === 'Available').length)
-const pendingCount   = computed(() => networks.value.filter(n => (n as any).state === 'Pending').length)
+const availableCount = computed(() => networks.value.filter(n => n.state === 'Available').length)
+const pendingCount   = computed(() => networks.value.filter(n => n.state === 'Pending').length)
 
 const netHeaders = [
   { title: 'Name',    key: 'name'      },
@@ -103,19 +102,31 @@ const nicHeaders = [
 
 async function load() {
   loading.value = true
+  loadError.value = null
   const ns = nsStore.active
-  ;[networks.value, interfaces.value] = await Promise.all([
-    api.networks.list(ns), api.networks.listInterfaces(ns)
-  ])
-  loading.value = false
+  try {
+    ;[networks.value, interfaces.value] = await Promise.all([
+      api.networks.list(ns), api.networks.listInterfaces(ns)
+    ])
+  } catch (e: unknown) {
+    loadError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    loading.value = false
+  }
 }
 
 function confirmDelete(name: string) { deleteTarget.value = name; deleteDialog.value = true }
 async function doDelete() {
   deleting.value = true
-  await netStore.deleteNetwork(deleteTarget.value)
-  deleting.value = false; deleteDialog.value = false
-  await load()
+  try {
+    await api.networks.delete(nsStore.active, deleteTarget.value)
+    deleteDialog.value = false
+    await load()
+  } catch (e: unknown) {
+    console.error('Delete failed:', e)
+  } finally {
+    deleting.value = false
+  }
 }
 
 onMounted(load)
