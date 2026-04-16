@@ -277,7 +277,7 @@ const form = ref({
   image:        'ubuntu-22.04',
   networkName:  '',
   ip:           '',
-  volumes: [],
+  volumes: [] as { name: string; sizeGiB: number; volumeClass: string }[],
 })
 
 function addVolume() {
