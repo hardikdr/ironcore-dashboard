@@ -7,6 +7,9 @@
     class="font-weight-medium"
     style="font-size: 11px"
   >
+    <template #prepend>
+      <v-icon :icon="chipIcon" size="12" aria-hidden="true" />
+    </template>
     {{ state }}
   </v-chip>
 </template>

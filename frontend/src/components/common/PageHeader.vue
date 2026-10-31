@@ -2,15 +2,15 @@
   <div class="d-flex align-center justify-space-between mb-6 flex-wrap ga-3">
     <div>
       <!-- Breadcrumb -->
-      <div v-if="breadcrumbs?.length" class="d-flex align-center ga-1 mb-1">
+      <nav v-if="breadcrumbs?.length" aria-label="Breadcrumb" class="d-flex align-center ga-1 mb-1">
         <template v-for="(crumb, i) in breadcrumbs" :key="crumb.text">
-          <router-link v-if="crumb.to" :to="crumb.to" class="text-caption text-medium-emphasis text-decoration-none" style="hover:text-decoration:underline">
+          <router-link v-if="crumb.to" :to="crumb.to" class="text-caption text-medium-emphasis text-decoration-none breadcrumb-link">
             {{ crumb.text }}
           </router-link>
-          <span v-else class="text-caption text-medium-emphasis">{{ crumb.text }}</span>
-          <v-icon v-if="i < breadcrumbs.length - 1" size="12" class="text-disabled">mdi-chevron-right</v-icon>
+          <span v-else class="text-caption text-medium-emphasis" aria-current="page">{{ crumb.text }}</span>
+          <v-icon v-if="i < breadcrumbs.length - 1" size="12" class="text-disabled" aria-hidden="true">mdi-chevron-right</v-icon>
         </template>
-      </div>
+      </nav>
       <!-- Title row -->
       <div class="d-flex align-center ga-3">
         <div
@@ -36,7 +36,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useTheme } from 'vuetify'
+import { useCardStyle } from '@/composables/useCardStyle'
 
 defineProps<{
   title:    string
@@ -46,8 +46,7 @@ defineProps<{
   breadcrumbs?: { text: string; to?: string }[]
 }>()
 
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
+const { isDark } = useCardStyle()
 
 const iconStyle = computed(() => ({
   width: '42px',
@@ -56,3 +55,7 @@ const iconStyle = computed(() => ({
   flexShrink: '0',
 }))
 </script>
+
+<style scoped>
+.breadcrumb-link:hover { text-decoration: underline; }
+</style>

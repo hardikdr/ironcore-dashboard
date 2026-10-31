@@ -32,7 +32,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useTheme } from 'vuetify'
+import { useCardStyle } from '@/composables/useCardStyle'
 
 const props = defineProps<{
   label:   string
@@ -43,15 +43,9 @@ const props = defineProps<{
   loading?: boolean
 }>()
 
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
+const { cardStyle } = useCardStyle()
 
 const valueColor = computed(() => `rgb(var(--v-theme-${props.color ?? 'primary'}))`)
-
-const cardStyle = computed(() => isDark.value
-  ? 'background: rgba(20,30,51,0.8); border: 1px solid rgba(129,140,248,0.12);'
-  : 'background: rgba(255,255,255,0.9); border: 1px solid rgba(99,102,241,0.12);'
-)
 
 const glowStyle = computed(() => ({
   position: 'absolute' as const,
