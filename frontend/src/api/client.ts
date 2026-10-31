@@ -75,6 +75,9 @@ export const api = {
       request<Prefix>(`/namespaces/${ns}/prefixes`, { method: 'POST', body: JSON.stringify(body) }),
     delete: (ns: string, name: string) =>
       request<void>(`/namespaces/${ns}/prefixes/${name}`, { method: 'DELETE' })
+  },
+  servers: {
+    list: () => request<Server[]>('/servers')
   }
 }
 
@@ -145,4 +148,17 @@ export interface PrefixDetail {
 }
 export interface CreatePrefixRequest {
   name: string; ipFamily: string; prefix?: string; prefixLength?: number; parentRef?: string
+}
+
+export interface Server {
+  name:        string
+  bmcAddress:  string
+  powerState:  string
+  location:    string
+  claimStatus: string
+}
+
+export function wsConsoleUrl(ns: string, name: string): string {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${proto}//${window.location.host}/api/v1/ws/machines/${ns}/${name}/console`
 }
