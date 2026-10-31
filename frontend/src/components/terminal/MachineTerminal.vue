@@ -54,14 +54,14 @@ function connect() {
   }
 
   ws.onerror = () => {
-    terminal?.write('\r\n\033[31mWebSocket error — could not connect to console.\033[0m\r\n')
+    terminal?.write('\r\n\x1b[31mWebSocket error — could not connect to console.\x1b[0m\r\n')
   }
 
   ws.onclose = () => {
-    terminal?.write('\r\n\033[90m[Connection closed]\033[0m\r\n')
+    terminal?.write('\r\n\x1b[90m[Connection closed]\x1b[0m\r\n')
   }
 
-  terminal.onData((data) => {
+  terminal.onData((data: string) => {
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(data)
     }
