@@ -82,10 +82,16 @@
                 size="x-small" variant="outlined"
                 :icon="item.power === 'On' ? 'mdi-power-off' : 'mdi-power'"
                 :color="item.power === 'On' ? 'warning' : 'success'"
+                :aria-label="item.power === 'On' ? `Power off ${item.name}` : `Power on ${item.name}`"
                 :title="item.power === 'On' ? 'Power off' : 'Power on'"
                 @click.stop="store.setPower(item.name, item.power === 'On' ? 'Off' : 'On')"
               />
-              <v-btn size="x-small" variant="outlined" icon="mdi-delete" color="error" @click.stop="confirmDelete(item.name)" />
+              <v-btn
+                size="x-small" variant="outlined" icon="mdi-delete" color="error"
+                :aria-label="`Delete machine ${item.name}`"
+                title="Delete machine"
+                @click.stop="confirmDelete(item.name)"
+              />
             </div>
           </template>
         </v-data-table>
@@ -94,7 +100,10 @@
 
     <v-dialog v-model="deleteDialog" max-width="420">
       <v-card>
-        <v-card-title>Delete machine?</v-card-title>
+        <v-card-title class="d-flex align-center ga-2">
+          <v-icon color="error">mdi-alert-circle-outline</v-icon>
+          Delete machine?
+        </v-card-title>
         <v-card-text>Machine <strong>{{ pendingDelete }}</strong> will be permanently deleted.</v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -137,6 +146,7 @@ const headers = [
 
 const filtered = computed(() => {
   const q = search.value.toLowerCase()
+  if (!q) return store.items
   return store.items.filter(m =>
     m.name.toLowerCase().includes(q) ||
     m.machineClass.toLowerCase().includes(q) ||
@@ -144,12 +154,21 @@ const filtered = computed(() => {
   )
 })
 
-const stats = computed(() => [
-  { label: 'Running',  value: store.items.filter(m => m.state === 'Running').length,  icon: 'mdi-check-circle-outline', color: 'success' },
-  { label: 'Pending',  value: store.items.filter(m => m.state === 'Pending').length,  icon: 'mdi-clock-outline',        color: 'warning' },
-  { label: 'Shutdown', value: store.items.filter(m => m.state === 'Shutdown').length, icon: 'mdi-power-off',            color: 'secondary' },
-  { label: 'Total',    value: store.items.length,                                     icon: 'mdi-server',               color: 'primary' },
-])
+const stats = computed(() => {
+  const counts = store.items.reduce((acc, m) => {
+    const s = (m.state ?? '').toLowerCase()
+    if (s === 'running')  acc.running++
+    else if (s === 'pending')  acc.pending++
+    else if (s === 'shutdown') acc.shutdown++
+    return acc
+  }, { running: 0, pending: 0, shutdown: 0 })
+  return [
+    { label: 'Running',  value: counts.running,  icon: 'mdi-check-circle-outline', color: 'success' },
+    { label: 'Pending',  value: counts.pending,  icon: 'mdi-clock-outline',        color: 'warning' },
+    { label: 'Shutdown', value: counts.shutdown, icon: 'mdi-power-off',            color: 'secondary' },
+    { label: 'Total',    value: store.items.length, icon: 'mdi-server',            color: 'primary' },
+  ]
+})
 
 function confirmDelete(name: string) { pendingDelete.value = name; deleteDialog.value = true }
 async function doDelete() { await store.deleteMachine(pendingDelete.value); deleteDialog.value = false }

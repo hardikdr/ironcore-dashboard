@@ -67,19 +67,26 @@
           <span class="text-caption text-medium-emphasis">{{ relativeTime(item.createdAt) }}</span>
         </template>
         <template #item.actions="{ item }">
-          <v-btn size="x-small" variant="outlined" icon="mdi-delete" color="error"
-            @click="confirmDelete(item.name)" />
+          <v-btn
+            size="x-small" variant="outlined" icon="mdi-delete" color="error"
+            :aria-label="`Delete volume ${item.name}`"
+            title="Delete volume"
+            @click="confirmDelete(item.name)"
+          />
         </template>
       </v-data-table>
     </v-card>
 
     <v-dialog v-model="deleteDialog" max-width="400">
       <v-card>
-        <v-card-title>Delete "{{ deleteTarget }}"?</v-card-title>
-        <v-card-text>This action cannot be undone. The volume will be permanently deleted from namespace <b>{{ nsStore.active }}</b>.</v-card-text>
+        <v-card-title class="d-flex align-center ga-2">
+          <v-icon color="error">mdi-alert-circle-outline</v-icon>
+          Delete volume?
+        </v-card-title>
+        <v-card-text>Volume <strong>{{ deleteTarget }}</strong> will be permanently deleted from namespace <b>{{ nsStore.active }}</b>. This action cannot be undone.</v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="outlined" @click="deleteDialog = false">Cancel</v-btn>
+          <v-btn variant="outlined" :disabled="deleting" @click="deleteDialog = false">Cancel</v-btn>
           <v-btn color="error" :loading="deleting" @click="doDelete">Delete</v-btn>
         </v-card-actions>
       </v-card>

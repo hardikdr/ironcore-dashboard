@@ -47,25 +47,34 @@
           <router-link :to="`/virtualips/${item.name}`" class="text-primary text-decoration-none font-weight-medium">{{ item.name }}</router-link>
         </template>
         <template #item.ip="{ item }">
-          <v-chip v-if="item.ip" size="x-small" color="deep-purple" class="font-weight-bold">{{ item.ip }}</v-chip>
-          <span v-else class="text-medium-emphasis">Pending…</span>
+          <CopyChip v-if="item.ip" :text="item.ip" color="info" />
+          <span v-else class="text-medium-emphasis text-caption">Pending…</span>
         </template>
         <template #item.createdAt="{ item }">
           <span class="text-caption text-medium-emphasis">{{ relativeTime(item.createdAt) }}</span>
         </template>
         <template #item.actions="{ item }">
-          <v-btn size="x-small" variant="outlined" icon="mdi-delete" color="error" @click="confirmDelete(item.name)" />
+          <v-btn
+            size="x-small" variant="outlined" icon="mdi-delete" color="error"
+            :aria-label="`Delete virtual IP ${item.name}`"
+            title="Delete virtual IP"
+            @click="confirmDelete(item.name)"
+          />
         </template>
       </v-data-table>
     </v-card>
 
     <v-dialog v-model="deleteDialog" max-width="400">
       <v-card>
-        <v-card-title>Delete "{{ deleteTarget }}"?</v-card-title>
-        <v-card-text>This action cannot be undone. The Virtual IP will be permanently deleted from namespace <b>{{ nsStore.active }}</b>.</v-card-text>
+        <v-card-title class="d-flex align-center ga-2">
+          <v-icon color="error">mdi-alert-circle-outline</v-icon>
+          Delete virtual IP?
+        </v-card-title>
+        <v-card-text>Virtual IP <strong>{{ deleteTarget }}</strong> will be permanently deleted from namespace <b>{{ nsStore.active }}</b>. This action cannot be undone.</v-card-text>
+        <v-alert v-if="deleteError" type="error" variant="tonal" class="mx-4 mb-2" density="compact">{{ deleteError }}</v-alert>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="outlined" @click="deleteDialog = false">Cancel</v-btn>
+          <v-btn variant="outlined" :disabled="deleting" @click="deleteDialog = false">Cancel</v-btn>
           <v-btn color="error" :loading="deleting" @click="doDelete">Delete</v-btn>
         </v-card-actions>
       </v-card>
@@ -81,6 +90,7 @@ import { useCardStyle }      from '@/composables/useCardStyle'
 import { relativeTime }      from '@/composables/useTime'
 import PageHeader from '@/components/common/PageHeader.vue'
 import StatCard   from '@/components/common/StatCard.vue'
+import CopyChip   from '@/components/common/CopyChip.vue'
 
 const nsStore  = useNamespaceStore()
 const { cardStyle, headerStyle } = useCardStyle()
@@ -91,6 +101,7 @@ const search       = ref('')
 const deleteDialog = ref(false)
 const deleteTarget = ref('')
 const deleting     = ref(false)
+const deleteError  = ref<string | null>(null)
 
 const allocatedCount = computed(() => items.value.filter(v => v.ip).length)
 const pendingCount   = computed(() => items.value.filter(v => !v.ip).length)
@@ -120,15 +131,16 @@ async function load() {
   }
 }
 
-function confirmDelete(name: string) { deleteTarget.value = name; deleteDialog.value = true }
+function confirmDelete(name: string) { deleteTarget.value = name; deleteDialog.value = true; deleteError.value = null }
 async function doDelete() {
   deleting.value = true
+  deleteError.value = null
   try {
     await api.virtualIPs.delete(nsStore.active, deleteTarget.value)
     deleteDialog.value = false
     await load()
   } catch (e: unknown) {
-    console.error('Delete failed:', e)
+    deleteError.value = e instanceof Error ? e.message : String(e)
   } finally {
     deleting.value = false
   }
