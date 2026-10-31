@@ -3,7 +3,7 @@
     <!-- ── Top Bar ─────────────────────────────────────────────────── -->
     <v-app-bar :elevation="0" height="56" :style="topBarStyle">
       <template #prepend>
-        <v-app-bar-nav-icon @click="rail = !rail" />
+        <v-app-bar-nav-icon aria-label="Toggle navigation drawer" @click="mobile ? (drawer = !drawer) : (rail = !rail)" />
         <div class="d-flex align-center ga-2 ml-1">
           <v-avatar size="28" rounded="sm" color="primary">
             <v-icon size="18" color="white">mdi-hexagon-multiple</v-icon>
@@ -35,6 +35,7 @@
             style="min-width:160px; max-width:200px"
             prepend-inner-icon="mdi-folder-outline"
             rounded="lg"
+            aria-label="Select namespace"
             @update:model-value="nsStore.setActive($event)"
           />
 
@@ -43,6 +44,7 @@
             :icon="isDark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
             variant="text"
             size="small"
+            :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
             :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
             @click="toggleTheme"
           />
@@ -53,6 +55,7 @@
             variant="text"
             size="small"
             :loading="anyLoading"
+            aria-label="Refresh all data"
             title="Refresh all data"
             @click="refreshAll"
           />
@@ -66,7 +69,7 @@
     </v-app-bar>
 
     <!-- ── Navigation Drawer ──────────────────────────────────────── -->
-    <v-navigation-drawer v-model="drawer" :rail="rail" :style="drawerStyle" width="240" rail-width="60">
+    <v-navigation-drawer v-model="drawer" :rail="rail && !mobile" :style="drawerStyle" width="240" rail-width="60" :temporary="mobile">
       <v-list density="compact" nav class="pt-2 pb-0">
         <NavItem to="/overview" icon="mdi-view-dashboard-outline" label="Overview" :rail="rail" />
 
@@ -108,7 +111,11 @@
 
     <!-- ── Main Content ───────────────────────────────────────────── -->
     <v-main :style="mainStyle">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <v-fade-transition mode="out-in" :duration="120">
+          <component :is="Component" :key="$route.path" />
+        </v-fade-transition>
+      </router-view>
     </v-main>
 
     <!-- ── Global Toasts ─────────────────────────────────────────── -->
@@ -118,7 +125,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useTheme } from 'vuetify'
+import { useTheme, useDisplay } from 'vuetify'
 import { useNamespaceStore }     from '@/stores/namespace'
 import { useMachinesStore }      from '@/stores/machines'
 import { useVolumesStore }       from '@/stores/volumes'
@@ -131,6 +138,7 @@ import NavSection         from '@/components/nav/NavSection.vue'
 import ToastNotifications from '@/components/common/ToastNotifications.vue'
 
 const vuetifyTheme = useTheme()
+const { mobile } = useDisplay()
 const rail   = ref(false)
 const drawer = ref(true)
 
