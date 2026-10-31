@@ -8,10 +8,10 @@ export const useLoadBalancersStore = defineStore('loadbalancers', () => {
   const loading = ref(false)
   const error   = ref<string | null>(null)
 
-  async function load() {
+  async function load(silent = false) {
     const ns = useNamespaceStore().active
-    loading.value = true
-    error.value   = null
+    if (!silent) loading.value = true
+    error.value = null
     try {
       items.value = await api.loadBalancers.list(ns)
     } catch (e: unknown) {

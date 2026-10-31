@@ -29,11 +29,25 @@
       <div class="d-flex align-center ga-2 pa-4" :style="headerStyle">
         <v-icon color="primary">mdi-lan</v-icon>
         <span class="font-weight-bold">Networks</span>
-        <v-chip size="x-small" color="primary">{{ networks.length }}</v-chip>
+        <v-chip size="x-small" color="primary">{{ filteredNetworks.length }}</v-chip>
+        <v-spacer />
+        <v-text-field
+          v-model="search"
+          prepend-inner-icon="mdi-magnify"
+          placeholder="Search…"
+          variant="outlined"
+          density="compact"
+          hide-details
+          clearable
+          style="max-width:240px"
+        />
       </div>
-      <v-data-table :headers="netHeaders" :items="networks" :loading="loading" density="compact" hover no-data-text="No networks">
+      <v-data-table :headers="netHeaders" :items="filteredNetworks" :loading="loading" density="compact" hover no-data-text="No networks">
         <template #item.name="{ item }">
           <router-link :to="`/networks/${item.name}`" class="text-primary text-decoration-none font-weight-medium">{{ item.name }}</router-link>
+        </template>
+        <template #item.createdAt="{ item }">
+          <span class="text-caption text-medium-emphasis">{{ relativeTime(item.createdAt) }}</span>
         </template>
         <template #item.actions="{ item }">
           <v-btn size="x-small" variant="outlined" icon="mdi-delete" color="error" @click="confirmDelete(item.name)" />
@@ -72,35 +86,31 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useTheme } from 'vuetify'
 import { api, type Network, type NetworkInterface } from '@/api/client'
 import { useNamespaceStore } from '@/stores/namespace'
-import PageHeader from '@/components/common/PageHeader.vue'
+import { useCardStyle }      from '@/composables/useCardStyle'
+import { relativeTime }      from '@/composables/useTime'
+import PageHeader  from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import StatCard from '@/components/common/StatCard.vue'
+import StatCard    from '@/components/common/StatCard.vue'
 
 const nsStore    = useNamespaceStore()
-const theme      = useTheme()
+const { cardStyle, headerStyle } = useCardStyle()
 const networks   = ref<Network[]>([])
 const interfaces = ref<NetworkInterface[]>([])
 const loading    = ref(false)
 const loadError  = ref<string | null>(null)
+const search       = ref('')
 const deleteDialog = ref(false)
 const deleteTarget = ref('')
 const deleting     = ref(false)
 
-const isDark = computed(() => theme.global.current.value.dark)
-const cardStyle = computed(() => ({
-  background: isDark.value ? 'rgba(20,30,51,0.8)' : '#ffffff',
-  border: `1px solid ${isDark.value ? 'rgba(129,140,248,0.1)' : 'rgba(0,0,0,0.12)'}`,
-}))
-const headerStyle = computed(() => ({
-  background: isDark.value ? 'rgba(14,21,40,0.9)' : '#f8fafc',
-  borderBottom: `1px solid ${isDark.value ? 'rgba(129,140,248,0.08)' : 'rgba(0,0,0,0.08)'}`,
-}))
-
-const availableCount = computed(() => networks.value.filter(n => n.state === 'Available').length)
-const pendingCount   = computed(() => networks.value.filter(n => n.state === 'Pending').length)
+const availableCount  = computed(() => networks.value.filter(n => n.state === 'Available').length)
+const pendingCount    = computed(() => networks.value.filter(n => n.state === 'Pending').length)
+const filteredNetworks = computed(() => {
+  const q = search.value.toLowerCase()
+  return q ? networks.value.filter(n => n.name.toLowerCase().includes(q)) : networks.value
+})
 
 const netHeaders = [
   { title: 'Name',    key: 'name'      },

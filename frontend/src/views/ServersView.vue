@@ -37,11 +37,22 @@
       <div class="d-flex align-center ga-2 pa-4" :style="headerStyle">
         <v-icon color="primary">mdi-server-network</v-icon>
         <span class="font-weight-bold">All Servers</span>
-        <v-chip size="x-small" color="primary">{{ items.length }}</v-chip>
+        <v-chip size="x-small" color="primary">{{ filtered.length }}</v-chip>
+        <v-spacer />
+        <v-text-field
+          v-model="search"
+          prepend-inner-icon="mdi-magnify"
+          placeholder="Search…"
+          variant="outlined"
+          density="compact"
+          hide-details
+          clearable
+          style="max-width:240px"
+        />
       </div>
       <v-data-table
         :headers="headers"
-        :items="items"
+        :items="filtered"
         :loading="loading"
         density="compact"
         hover
@@ -70,29 +81,25 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useTheme } from 'vuetify'
 import { api, type Server } from '@/api/client'
-import PageHeader from '@/components/common/PageHeader.vue'
-import StatCard from '@/components/common/StatCard.vue'
-import StatusBadge from '@/components/common/StatusBadge.vue'
+import { useCardStyle }     from '@/composables/useCardStyle'
+import PageHeader   from '@/components/common/PageHeader.vue'
+import StatCard     from '@/components/common/StatCard.vue'
+import StatusBadge  from '@/components/common/StatusBadge.vue'
 
-const theme   = useTheme()
+const { cardStyle, headerStyle } = useCardStyle()
 const items   = ref<Server[]>([])
 const loading = ref(false)
-
-const isDark = computed(() => theme.global.current.value.dark)
-const cardStyle = computed(() => ({
-  background: isDark.value ? 'rgba(20,30,51,0.8)' : '#ffffff',
-  border: `1px solid ${isDark.value ? 'rgba(129,140,248,0.1)' : 'rgba(0,0,0,0.12)'}`,
-}))
-const headerStyle = computed(() => ({
-  background: isDark.value ? 'rgba(14,21,40,0.9)' : '#f8fafc',
-  borderBottom: `1px solid ${isDark.value ? 'rgba(129,140,248,0.08)' : 'rgba(0,0,0,0.08)'}`,
-}))
+const search  = ref('')
 
 const onCount      = computed(() => items.value.filter(s => s.powerState === 'On').length)
 const offCount     = computed(() => items.value.filter(s => s.powerState === 'Off').length)
 const claimedCount = computed(() => items.value.filter(s => s.claimStatus === 'Claimed').length)
+
+const filtered = computed(() => {
+  const q = search.value.toLowerCase()
+  return q ? items.value.filter(s => s.name.toLowerCase().includes(q) || s.bmcAddress.toLowerCase().includes(q)) : items.value
+})
 
 const headers = [
   { title: 'Name',         key: 'name'        },

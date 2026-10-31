@@ -29,9 +29,20 @@
       <div class="d-flex align-center ga-2 pa-4" :style="headerStyle">
         <v-icon color="primary">mdi-ip-network</v-icon>
         <span class="font-weight-bold">IP Prefixes</span>
-        <v-chip size="x-small" color="primary">{{ items.length }}</v-chip>
+        <v-chip size="x-small" color="primary">{{ filtered.length }}</v-chip>
+        <v-spacer />
+        <v-text-field
+          v-model="search"
+          prepend-inner-icon="mdi-magnify"
+          placeholder="Search…"
+          variant="outlined"
+          density="compact"
+          hide-details
+          clearable
+          style="max-width:240px"
+        />
       </div>
-      <v-data-table :headers="headers" :items="items" :loading="loading" density="compact" hover :no-data-text="loadError ?? 'No IP prefixes'">
+      <v-data-table :headers="headers" :items="filtered" :loading="loading" density="compact" hover :no-data-text="loadError ?? 'No IP prefixes'">
         <template #item.name="{ item }">
           <router-link :to="`/prefixes/${item.name}`" class="text-primary text-decoration-none font-weight-medium">{{ item.name }}</router-link>
         </template>
@@ -39,6 +50,9 @@
           <code class="text-primary">{{ item.prefix || '—' }}</code>
         </template>
         <template #item.phase="{ item }"><StatusBadge :state="item.phase" /></template>
+        <template #item.createdAt="{ item }">
+          <span class="text-caption text-medium-emphasis">{{ relativeTime(item.createdAt) }}</span>
+        </template>
         <template #item.actions="{ item }">
           <v-btn size="x-small" variant="outlined" icon="mdi-delete" color="error" @click="confirmDelete(item.name)" />
         </template>
@@ -61,34 +75,30 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useTheme } from 'vuetify'
 import { api, type Prefix } from '@/api/client'
 import { useNamespaceStore } from '@/stores/namespace'
-import PageHeader from '@/components/common/PageHeader.vue'
+import { useCardStyle }      from '@/composables/useCardStyle'
+import { relativeTime }      from '@/composables/useTime'
+import PageHeader  from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import StatCard from '@/components/common/StatCard.vue'
+import StatCard    from '@/components/common/StatCard.vue'
 
 const nsStore      = useNamespaceStore()
-const theme        = useTheme()
+const { cardStyle, headerStyle } = useCardStyle()
 const items        = ref<Prefix[]>([])
 const loading      = ref(false)
 const loadError    = ref<string | null>(null)
+const search       = ref('')
 const deleteDialog = ref(false)
 const deleteTarget = ref('')
 const deleting     = ref(false)
 
-const isDark = computed(() => theme.global.current.value.dark)
-const cardStyle = computed(() => ({
-  background: isDark.value ? 'rgba(20,30,51,0.8)' : '#ffffff',
-  border: `1px solid ${isDark.value ? 'rgba(129,140,248,0.1)' : 'rgba(0,0,0,0.12)'}`,
-}))
-const headerStyle = computed(() => ({
-  background: isDark.value ? 'rgba(14,21,40,0.9)' : '#f8fafc',
-  borderBottom: `1px solid ${isDark.value ? 'rgba(129,140,248,0.08)' : 'rgba(0,0,0,0.08)'}`,
-}))
-
 const allocatedCount = computed(() => items.value.filter(p => p.phase === 'Allocated').length)
 const pendingCount   = computed(() => items.value.filter(p => p.phase === 'Pending').length)
+const filtered       = computed(() => {
+  const q = search.value.toLowerCase()
+  return q ? items.value.filter(i => i.name.toLowerCase().includes(q) || (i.prefix ?? '').toLowerCase().includes(q)) : items.value
+})
 
 const headers = [
   { title: 'Name',    key: 'name'      },

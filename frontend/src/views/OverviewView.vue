@@ -94,6 +94,9 @@
             <template #item.name="{ item }">
               <router-link :to="item.link" class="text-decoration-none font-weight-medium">{{ item.name }}</router-link>
             </template>
+            <template #item.created="{ item }">
+              <span class="text-caption text-medium-emphasis">{{ relativeTime(item.created) }}</span>
+            </template>
           </v-data-table>
         </v-card>
       </v-col>
@@ -140,7 +143,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { useTheme } from 'vuetify'
+import { useCardStyle }  from '@/composables/useCardStyle'
+import { relativeTime }  from '@/composables/useTime'
 import PageHeader   from '@/components/common/PageHeader.vue'
 import StatCard     from '@/components/common/StatCard.vue'
 import StatusBadge  from '@/components/common/StatusBadge.vue'
@@ -154,13 +158,8 @@ import { useLoadBalancersStore } from '@/stores/loadbalancers'
 import { usePrefixesStore }   from '@/stores/prefixes'
 import { useNamespaceStore }  from '@/stores/namespace'
 
-const theme = useTheme()
-const isDark = computed(() => theme.global.current.value.dark)
-const cardStyle = computed(() =>
-  isDark.value
-    ? 'background: rgba(20,30,51,0.8); border: 1px solid rgba(129,140,248,0.1);'
-    : 'background: rgba(255,255,255,0.9); border: 1px solid rgba(99,102,241,0.1);'
-)
+const theme = useCardStyle()
+const { cardStyle } = theme
 
 const machinesStore  = useMachinesStore()
 const volumesStore   = useVolumesStore()
@@ -226,21 +225,16 @@ const recentHeaders = [
 const recentResources = computed(() => {
   const rows: { name: string; type: string; status: string; created: string; link: string }[] = []
   machinesStore.items.slice(0,4).forEach(m => rows.push({
-    name: m.name, type: 'Machine', status: m.state || m.power || '—', created: shortDate(m.createdAt), link: `/machines/${m.name}`
+    name: m.name, type: 'Machine', status: m.state || m.power || '—', created: m.createdAt, link: `/machines/${m.name}`
   }))
   volumesStore.items.slice(0,3).forEach(v => rows.push({
-    name: v.name, type: 'Volume', status: v.state || '—', created: shortDate(v.createdAt), link: `/volumes/${v.name}`
+    name: v.name, type: 'Volume', status: v.state || '—', created: v.createdAt, link: `/volumes/${v.name}`
   }))
   networksStore.items.slice(0,2).forEach((n: { name: string; createdAt?: string }) => rows.push({
-    name: n.name, type: 'Network', status: 'Active', created: shortDate(n.createdAt), link: `/networks/${n.name}`
+    name: n.name, type: 'Network', status: 'Active', created: n.createdAt ?? '', link: `/networks/${n.name}`
   }))
-  return rows.sort((a,b) => b.created.localeCompare(a.created)).slice(0, 8)
+  return rows.sort((a,b) => (b.created > a.created ? 1 : -1)).slice(0, 8)
 })
-
-function shortDate(iso?: string) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en', { month: 'short', day: 'numeric' })
-}
 
 function typeColor(type: string) {
   const m: Record<string, string> = { Machine: 'primary', Volume: 'info', Network: 'accent' }

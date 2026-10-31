@@ -8,14 +8,14 @@ export const useMachinesStore = defineStore('machines', () => {
   const loading = ref(false)
   const error   = ref<string | null>(null)
 
-  async function load() {
+  async function load(silent = false) {
     const ns = useNamespaceStore().active
-    loading.value = true
-    error.value   = null
+    if (!silent) loading.value = true
+    error.value = null
     try {
       items.value = await api.machines.list(ns)
-    } catch (e: any) {
-      error.value = e.message
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e)
     } finally {
       loading.value = false
     }

@@ -194,8 +194,10 @@ func machineToResponse(cs versioned.Interface, m *computev1alpha1.Machine, r *ht
 		State:        string(m.Status.State),
 		Power:        string(m.Spec.Power),
 		MachineClass: m.Spec.MachineClassRef.Name,
+		Image:        m.Spec.Image,
 		IPs:          ips,
 		Volumes:      vols,
+		Annotations:  m.Annotations,
 		CreatedAt:    m.CreationTimestamp.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 }

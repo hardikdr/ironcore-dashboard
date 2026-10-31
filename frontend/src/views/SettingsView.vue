@@ -63,21 +63,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useTheme } from 'vuetify'
 import { useNamespaceStore } from '@/stores/namespace'
+import { useCardStyle }      from '@/composables/useCardStyle'
 import PageHeader from '@/components/common/PageHeader.vue'
 
 const theme   = useTheme()
 const nsStore = useNamespaceStore()
+const { isDark, cardStyle } = useCardStyle()
 
-const isDark    = computed(() => theme.global.current.value.dark)
 const apiServer = window.location.origin
-
-const cardStyle = computed(() => ({
-  background: isDark.value ? 'rgba(20,30,51,0.8)' : '#ffffff',
-  border: `1px solid ${isDark.value ? 'rgba(129,140,248,0.1)' : 'rgba(0,0,0,0.12)'}`,
-}))
 
 function toggleTheme() {
   theme.global.name.value = isDark.value ? 'light' : 'dark'

@@ -85,7 +85,8 @@ export const api = {
 
 export interface Machine {
   name: string; namespace: string; state: string; power: string
-  machineClass: string; image: string; ips: string[]; volumes: string[]; createdAt: string
+  machineClass: string; image: string; ips: string[]; volumes: string[]
+  annotations?: Record<string, string>; createdAt: string
 }
 export interface CreateMachineRequest {
   name: string; machineClass: string; image: string

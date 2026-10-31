@@ -29,15 +29,29 @@
       <div class="d-flex align-center ga-2 pa-4" :style="headerStyle">
         <v-icon color="primary">mdi-earth</v-icon>
         <span class="font-weight-bold">Virtual IPs</span>
-        <v-chip size="x-small" color="primary">{{ items.length }}</v-chip>
+        <v-chip size="x-small" color="primary">{{ filtered.length }}</v-chip>
+        <v-spacer />
+        <v-text-field
+          v-model="search"
+          prepend-inner-icon="mdi-magnify"
+          placeholder="Search…"
+          variant="outlined"
+          density="compact"
+          hide-details
+          clearable
+          style="max-width:240px"
+        />
       </div>
-      <v-data-table :headers="headers" :items="items" :loading="loading" density="compact" hover :no-data-text="loadError ?? 'No virtual IPs'">
+      <v-data-table :headers="headers" :items="filtered" :loading="loading" density="compact" hover :no-data-text="loadError ?? 'No virtual IPs'">
         <template #item.name="{ item }">
           <router-link :to="`/virtualips/${item.name}`" class="text-primary text-decoration-none font-weight-medium">{{ item.name }}</router-link>
         </template>
         <template #item.ip="{ item }">
           <v-chip v-if="item.ip" size="x-small" color="deep-purple" class="font-weight-bold">{{ item.ip }}</v-chip>
           <span v-else class="text-medium-emphasis">Pending…</span>
+        </template>
+        <template #item.createdAt="{ item }">
+          <span class="text-caption text-medium-emphasis">{{ relativeTime(item.createdAt) }}</span>
         </template>
         <template #item.actions="{ item }">
           <v-btn size="x-small" variant="outlined" icon="mdi-delete" color="error" @click="confirmDelete(item.name)" />
@@ -61,33 +75,29 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useTheme } from 'vuetify'
 import { api, type VirtualIP } from '@/api/client'
 import { useNamespaceStore } from '@/stores/namespace'
+import { useCardStyle }      from '@/composables/useCardStyle'
+import { relativeTime }      from '@/composables/useTime'
 import PageHeader from '@/components/common/PageHeader.vue'
-import StatCard from '@/components/common/StatCard.vue'
+import StatCard   from '@/components/common/StatCard.vue'
 
 const nsStore  = useNamespaceStore()
-const theme    = useTheme()
+const { cardStyle, headerStyle } = useCardStyle()
 const items    = ref<VirtualIP[]>([])
 const loading  = ref(false)
 const loadError = ref<string | null>(null)
+const search       = ref('')
 const deleteDialog = ref(false)
 const deleteTarget = ref('')
 const deleting     = ref(false)
 
-const isDark = computed(() => theme.global.current.value.dark)
-const cardStyle = computed(() => ({
-  background: isDark.value ? 'rgba(20,30,51,0.8)' : '#ffffff',
-  border: `1px solid ${isDark.value ? 'rgba(129,140,248,0.1)' : 'rgba(0,0,0,0.12)'}`,
-}))
-const headerStyle = computed(() => ({
-  background: isDark.value ? 'rgba(14,21,40,0.9)' : '#f8fafc',
-  borderBottom: `1px solid ${isDark.value ? 'rgba(129,140,248,0.08)' : 'rgba(0,0,0,0.08)'}`,
-}))
-
 const allocatedCount = computed(() => items.value.filter(v => v.ip).length)
 const pendingCount   = computed(() => items.value.filter(v => !v.ip).length)
+const filtered       = computed(() => {
+  const q = search.value.toLowerCase()
+  return q ? items.value.filter(i => i.name.toLowerCase().includes(q)) : items.value
+})
 
 const headers = [
   { title: 'Name',      key: 'name'      },

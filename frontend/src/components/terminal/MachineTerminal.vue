@@ -1,24 +1,53 @@
 <template>
-  <div ref="container" class="terminal-container" />
+  <div ref="container" class="terminal-container">
+    <!-- Connection status bar -->
+    <div class="term-statusbar d-flex align-center ga-2 px-3 py-1">
+      <v-icon :color="currentColor" size="10">mdi-circle</v-icon>
+      <span class="text-caption" :style="{ color: currentColor }">{{ currentLabel }}</span>
+      <v-spacer />
+      <v-btn
+        v-if="showReconnect"
+        size="x-small"
+        variant="tonal"
+        color="primary"
+        prepend-icon="mdi-refresh"
+        @click="manualReconnect"
+      >Reconnect</v-btn>
+    </div>
+    <div ref="termEl" class="term-body" />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 
-const props = defineProps<{ wsUrl: string }>()
+const props = defineProps<{ wsUrl: string; active?: boolean }>()
 
 const container = ref<HTMLElement | null>(null)
-const theme = useTheme()
+const termEl    = ref<HTMLElement | null>(null)
+const theme     = useTheme()
+
+type ConnStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
+const status = ref<ConnStatus>('disconnected')
+const STATUS_COLOR: Record<ConnStatus, string> = { connecting: '#fbbf24', connected: '#34d399', disconnected: '#94a3b8', error: '#f87171' }
+const STATUS_LABEL: Record<ConnStatus, string> = { connecting: 'Connecting…', connected: 'Connected', disconnected: 'Disconnected', error: 'Connection failed' }
+const currentColor = computed(() => STATUS_COLOR[status.value])
+const currentLabel = computed(() => STATUS_LABEL[status.value])
+
+const showReconnect = ref(false)
 
 let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
 let ws: WebSocket | null = null
 let resizeObserver: ResizeObserver | null = null
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let reconnectAttempts = 0
+const MAX_RECONNECT = 3
 
 function buildTheme() {
   const dark = theme.global.current.value.dark
@@ -27,9 +56,8 @@ function buildTheme() {
     : { background: '#ffffff', foreground: '#1f2328', cursor: '#0969da', selectionBackground: '#b6d4f8' }
 }
 
-function connect() {
-  if (!container.value) return
-
+function initTerminal() {
+  if (!termEl.value || terminal) return
   terminal = new Terminal({
     fontFamily: 'JetBrains Mono, Fira Code, Cascadia Code, monospace',
     fontSize: 13,
@@ -38,16 +66,29 @@ function connect() {
     theme: buildTheme(),
     allowTransparency: true,
   })
-
   fitAddon = new FitAddon()
   terminal.loadAddon(fitAddon)
   terminal.loadAddon(new WebLinksAddon())
-  terminal.open(container.value)
+  terminal.open(termEl.value)
   fitAddon.fit()
+  terminal.onData((data: string) => {
+    if (ws?.readyState === WebSocket.OPEN) ws.send(data)
+  })
+  resizeObserver = new ResizeObserver(() => { fitAddon?.fit(); sendResize() })
+  resizeObserver.observe(termEl.value)
+}
 
+function connect() {
+  if (!terminal) initTerminal()
+  status.value = 'connecting'
+  showReconnect.value = false
   ws = new WebSocket(props.wsUrl)
 
-  ws.onopen = () => { sendResize() }
+  ws.onopen = () => {
+    status.value = 'connected'
+    reconnectAttempts = 0
+    sendResize()
+  }
 
   ws.onmessage = (ev) => {
     terminal?.write(typeof ev.data === 'string' ? ev.data : new Uint8Array(ev.data))
@@ -55,23 +96,31 @@ function connect() {
 
   ws.onerror = () => {
     terminal?.write('\r\n\x1b[31mWebSocket error — could not connect to console.\x1b[0m\r\n')
+    status.value = 'error'
   }
 
   ws.onclose = () => {
+    status.value = 'disconnected'
     terminal?.write('\r\n\x1b[90m[Connection closed]\x1b[0m\r\n')
+    scheduleReconnect()
   }
+}
 
-  terminal.onData((data: string) => {
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(data)
-    }
-  })
+function scheduleReconnect() {
+  if (reconnectAttempts >= MAX_RECONNECT) {
+    showReconnect.value = true
+    return
+  }
+  const delay = [1000, 2000, 4000][reconnectAttempts] ?? 4000
+  reconnectAttempts++
+  terminal?.write(`\x1b[90m[Reconnecting in ${delay / 1000}s… attempt ${reconnectAttempts}/${MAX_RECONNECT}]\x1b[0m\r\n`)
+  reconnectTimer = setTimeout(() => connect(), delay)
+}
 
-  resizeObserver = new ResizeObserver(() => {
-    fitAddon?.fit()
-    sendResize()
-  })
-  resizeObserver.observe(container.value)
+function manualReconnect() {
+  reconnectAttempts = 0
+  showReconnect.value = false
+  connect()
 }
 
 function sendResize() {
@@ -81,30 +130,57 @@ function sendResize() {
 }
 
 function disconnect() {
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null }
   resizeObserver?.disconnect()
   ws?.close()
-  terminal?.dispose()
-  terminal = null
-  fitAddon = null
   ws = null
 }
 
+function dispose() {
+  disconnect()
+  terminal?.dispose()
+  terminal = null
+  fitAddon = null
+}
+
+// Only connect when active prop turns true (lazy activation)
+watch(() => props.active, (active) => {
+  if (active) connect()
+  else disconnect()
+}, { immediate: false })
+
 watch(() => props.wsUrl, () => {
   disconnect()
-  connect()
+  if (props.active !== false) connect()
 })
 
-onMounted(connect)
-onUnmounted(disconnect)
+onMounted(() => {
+  if (props.active !== false) connect()
+})
+
+onUnmounted(dispose)
 </script>
 
 <style scoped>
 .terminal-container {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
-  min-height: 400px;
+  min-height: 440px;
   background: #0d1117;
   border-radius: 8px;
+  overflow: hidden;
+}
+.term-statusbar {
+  background: rgba(0,0,0,0.4);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  min-height: 28px;
+  flex-shrink: 0;
+}
+.term-body {
+  flex: 1;
+  padding: 8px;
   overflow: hidden;
 }
 </style>

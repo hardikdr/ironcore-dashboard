@@ -78,25 +78,18 @@
 
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue'
-import { useTheme } from 'vuetify'
-import { useMachinesStore } from '@/stores/machines'
+import { useMachinesStore }  from '@/stores/machines'
 import { useNamespaceStore } from '@/stores/namespace'
+import { useCardStyle }      from '@/composables/useCardStyle'
 import PageHeader from '@/components/common/PageHeader.vue'
 import type { Machine } from '@/api/client'
 
 const store   = useMachinesStore()
 const nsStore = useNamespaceStore()
-const theme   = useTheme()
-
-const isDark = computed(() => theme.global.current.value.dark)
-const cardStyle = computed(() => ({
-  background: isDark.value ? 'rgba(20,30,51,0.8)' : '#ffffff',
-  border: `1px solid ${isDark.value ? 'rgba(129,140,248,0.1)' : 'rgba(0,0,0,0.12)'}`,
-}))
+const { isDark, cardStyle } = useCardStyle()
 
 function parseLocation(m: Machine): { region: string; az: string; rack: string } {
-  const annotations = (m as unknown as Record<string, unknown>)['annotations'] as Record<string, string> | undefined
-  const loc = annotations?.['metal.ironcore.dev/location'] ?? ''
+  const loc = m.annotations?.['metal.ironcore.dev/location'] ?? ''
   const parts = loc.split('/')
   return {
     region: parts[0] || 'default',

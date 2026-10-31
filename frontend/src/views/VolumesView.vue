@@ -35,11 +35,22 @@
       <div class="d-flex align-center ga-2 pa-4" :style="headerStyle">
         <v-icon color="primary">mdi-database</v-icon>
         <span class="font-weight-bold">Volumes</span>
-        <v-chip size="x-small" color="primary">{{ store.items.length }}</v-chip>
+        <v-chip size="x-small" color="primary">{{ filtered.length }}</v-chip>
+        <v-spacer />
+        <v-text-field
+          v-model="search"
+          prepend-inner-icon="mdi-magnify"
+          placeholder="Search…"
+          variant="outlined"
+          density="compact"
+          hide-details
+          clearable
+          style="max-width:240px"
+        />
       </div>
       <v-data-table
         :headers="headers"
-        :items="store.items"
+        :items="filtered"
         :loading="store.loading"
         density="compact"
         hover
@@ -52,6 +63,9 @@
         </template>
         <template #item.state="{ item }"><StatusBadge :state="item.state" /></template>
         <template #item.sizeBytes="{ item }">{{ formatBytes(item.sizeBytes) }}</template>
+        <template #item.createdAt="{ item }">
+          <span class="text-caption text-medium-emphasis">{{ relativeTime(item.createdAt) }}</span>
+        </template>
         <template #item.actions="{ item }">
           <v-btn size="x-small" variant="outlined" icon="mdi-delete" color="error"
             @click="confirmDelete(item.name)" />
@@ -75,33 +89,29 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useTheme } from 'vuetify'
-import { useVolumesStore } from '@/stores/volumes'
+import { useVolumesStore }   from '@/stores/volumes'
 import { useNamespaceStore } from '@/stores/namespace'
-import PageHeader from '@/components/common/PageHeader.vue'
-import StatusBadge from '@/components/common/StatusBadge.vue'
-import StatCard from '@/components/common/StatCard.vue'
+import { useCardStyle }      from '@/composables/useCardStyle'
+import { relativeTime }      from '@/composables/useTime'
+import PageHeader   from '@/components/common/PageHeader.vue'
+import StatusBadge  from '@/components/common/StatusBadge.vue'
+import StatCard     from '@/components/common/StatCard.vue'
 
 const store   = useVolumesStore()
 const nsStore = useNamespaceStore()
-const theme   = useTheme()
-
+const { cardStyle, headerStyle } = useCardStyle()
+const search       = ref('')
 const deleteDialog = ref(false)
 const deleteTarget = ref('')
 const deleting     = ref(false)
 
-const isDark = computed(() => theme.global.current.value.dark)
-const cardStyle = computed(() => ({
-  background: isDark.value ? 'rgba(20,30,51,0.8)' : '#ffffff',
-  border: `1px solid ${isDark.value ? 'rgba(129,140,248,0.1)' : 'rgba(0,0,0,0.12)'}`,
-}))
-const headerStyle = computed(() => ({
-  background: isDark.value ? 'rgba(14,21,40,0.9)' : '#f8fafc',
-  borderBottom: `1px solid ${isDark.value ? 'rgba(129,140,248,0.08)' : 'rgba(0,0,0,0.08)'}`,
-}))
-
 const availableCount = computed(() => store.items.filter(v => v.state === 'Available').length)
 const pendingCount   = computed(() => store.items.filter(v => v.state === 'Pending').length)
+
+const filtered = computed(() => {
+  const q = search.value.toLowerCase()
+  return q ? store.items.filter(v => v.name.toLowerCase().includes(q) || v.volumeClass.toLowerCase().includes(q)) : store.items
+})
 
 const headers = [
   { title: 'Name',         key: 'name'        },

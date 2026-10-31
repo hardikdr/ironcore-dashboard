@@ -6,15 +6,16 @@ import (
 )
 
 type MachineResponse struct {
-	Name         string   `json:"name"`
-	Namespace    string   `json:"namespace"`
-	State        string   `json:"state"`
-	Power        string   `json:"power"`
-	MachineClass string   `json:"machineClass"`
-	Image        string   `json:"image"`
-	IPs          []string `json:"ips"`
-	Volumes      []string `json:"volumes"`
-	CreatedAt    string   `json:"createdAt"`
+	Name         string            `json:"name"`
+	Namespace    string            `json:"namespace"`
+	State        string            `json:"state"`
+	Power        string            `json:"power"`
+	MachineClass string            `json:"machineClass"`
+	Image        string            `json:"image"`
+	IPs          []string          `json:"ips"`
+	Volumes      []string          `json:"volumes"`
+	Annotations  map[string]string `json:"annotations,omitempty"`
+	CreatedAt    string            `json:"createdAt"`
 }
 
 type VolumeResponse struct {
