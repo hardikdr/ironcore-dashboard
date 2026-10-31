@@ -1,8 +1,11 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"io/fs"
+	"net"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -11,17 +14,20 @@ import (
 	"github.com/ironcore-dev/ironcore-dashboard/internal/api"
 	versioned "github.com/ironcore-dev/ironcore/client-go/ironcore/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"nhooyr.io/websocket"
 )
 
 type Server struct {
 	router   *chi.Mux
 	ironcore versioned.Interface
 	k8s      *kubernetes.Clientset
+	dyn      dynamic.Interface
 }
 
-func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, frontendFS fs.FS) *Server {
-	s := &Server{ironcore: cs, k8s: k8sClient}
+func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dynamic.Interface, frontendFS fs.FS) *Server {
+	s := &Server{ironcore: cs, k8s: k8sClient, dyn: dynClient}
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -111,6 +117,13 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, frontendFS fs.
 		r.Delete("/{name}", iph.DeletePrefix)
 	})
 
+	// Servers (metal-operator)
+	sh := api.NewServerHandler(s.dyn)
+	r.Get("/api/v1/servers", sh.List)
+
+	// Machine WebSocket console
+	r.Get("/api/v1/ws/machines/{ns}/{name}/console", s.handleMachineConsole)
+
 	// Serve built Vue SPA for all other routes
 	if frontendFS != nil {
 		fileServer := http.FileServer(http.FS(frontendFS))
@@ -126,6 +139,94 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, frontendFS fs.
 
 	s.router = r
 	return s
+}
+
+func (s *Server) handleMachineConsole(w http.ResponseWriter, r *http.Request) {
+	ns := chi.URLParam(r, "ns")
+	name := chi.URLParam(r, "name")
+
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		InsecureSkipVerify: true,
+	})
+	if err != nil {
+		return
+	}
+	defer conn.CloseNow()
+
+	ctx := r.Context()
+
+	banner := "\r\n\033[1;32mIronCore Machine Console — " + name + " (" + ns + ")\033[0m\r\n\033[90mConnecting...\033[0m\r\n"
+	conn.Write(ctx, websocket.MessageText, []byte(banner))
+
+	// Try to get machine IPs via NIC objects and SSH passthrough
+	machine, err := s.ironcore.ComputeV1alpha1().Machines(ns).Get(ctx, name, metav1.GetOptions{})
+	if err == nil {
+		for _, niStatus := range machine.Status.NetworkInterfaces {
+			if niStatus.NetworkInterfaceRef.Name == "" {
+				continue
+			}
+			nic, nicErr := s.ironcore.NetworkingV1alpha1().NetworkInterfaces(ns).Get(ctx, niStatus.NetworkInterfaceRef.Name, metav1.GetOptions{})
+			if nicErr != nil {
+				continue
+			}
+			for _, ipAddr := range nic.Status.IPs {
+				ip := ipAddr.String()
+				tcpConn, dialErr := net.DialTimeout("tcp", ip+":22", 3_000_000_000)
+				if dialErr == nil {
+					conn.Write(ctx, websocket.MessageText, []byte("\033[32mSSH passthrough to "+ip+":22\033[0m\r\n"))
+					go func() {
+						for {
+							_, msg, readErr := conn.Read(ctx)
+							if readErr != nil {
+								return
+							}
+							tcpConn.Write(msg)
+						}
+					}()
+					io.Copy(&wsWriter{conn: conn, ctx: ctx}, tcpConn)
+					return
+				}
+			}
+		}
+	}
+
+	// Simulated shell fallback
+	conn.Write(ctx, websocket.MessageText, []byte("\033[33mNo reachable console endpoint. Running simulated shell.\033[0m\r\n\r\n\033[1m"+name+":~$\033[0m "))
+	for {
+		_, msg, readErr := conn.Read(ctx)
+		if readErr != nil {
+			return
+		}
+
+		var frame struct {
+			Type string `json:"type"`
+		}
+		if json.Unmarshal(msg, &frame) == nil && frame.Type == "resize" {
+			continue
+		}
+
+		line := string(msg)
+		if line == "exit\r" || line == "exit\n" || line == "exit" {
+			conn.Write(ctx, websocket.MessageText, []byte("\r\nlogout\r\n"))
+			conn.Close(websocket.StatusNormalClosure, "logout")
+			return
+		}
+		response := "\r\n\033[33mbash: " + line + ": command not found\033[0m\r\n\033[1m" + name + ":~$\033[0m "
+		conn.Write(ctx, websocket.MessageText, []byte(response))
+	}
+}
+
+type wsWriter struct {
+	conn *websocket.Conn
+	ctx  context.Context
+}
+
+func (w *wsWriter) Write(p []byte) (int, error) {
+	err := w.conn.Write(w.ctx, websocket.MessageBinary, p)
+	if err != nil {
+		return 0, err
+	}
+	return len(p), nil
 }
 
 func (s *Server) Router() *chi.Mux { return s.router }

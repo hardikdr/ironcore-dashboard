@@ -54,7 +54,7 @@ const cardStyle = computed(() => isDark.value
 )
 
 const glowStyle = computed(() => ({
-  position: 'absolute',
+  position: 'absolute' as const,
   top: '-20px',
   right: '-20px',
   width: '80px',

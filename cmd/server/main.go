@@ -7,6 +7,7 @@ import (
 	ironclient "github.com/ironcore-dev/ironcore-dashboard/internal/client"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/server"
 	rootpkg "github.com/ironcore-dev/ironcore-dashboard"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -38,7 +39,12 @@ func main() {
 		log.Fatalf("k8s client: %v", err)
 	}
 
-	srv := server.New(cs, k8sClient, rootpkg.Frontend())
+	dynClient, err := dynamic.NewForConfig(k8sCfg)
+	if err != nil {
+		log.Fatalf("dynamic client: %v", err)
+	}
+
+	srv := server.New(cs, k8sClient, dynClient, rootpkg.Frontend())
 	log.Printf("IronCore Dashboard listening on %s", *addr)
 	if err := srv.ListenAndServe(*addr); err != nil {
 		log.Fatalf("server error: %v", err)

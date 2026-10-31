@@ -61,7 +61,7 @@
         <v-card :style="cardStyle" class="pa-4" height="280">
           <div class="text-subtitle-2 font-weight-bold mb-4">Networking</div>
           <div class="d-flex flex-column ga-3 mt-2">
-            <OverviewRow icon="mdi-lan" label="Networks"      :value="networksStore.networks.length"      color="info" />
+            <OverviewRow icon="mdi-lan" label="Networks"      :value="networksStore.items.length"      color="info" />
             <OverviewRow icon="mdi-earth" label="Virtual IPs"  :value="vipsStore.items.length"             color="accent" />
             <OverviewRow icon="mdi-scale-balance" label="Load Balancers" :value="lbsStore.items.length"   color="secondary" />
             <OverviewRow icon="mdi-ip-network" label="IP Prefixes" :value="prefixesStore.items.length"    color="primary" />
@@ -175,7 +175,7 @@ const stats = computed(() => [
   { label: 'Machines',      value: machinesStore.items.length,  icon: 'mdi-server',             color: 'primary',   sub: runningMachines.value + ' running' },
   { label: 'Running',       value: runningMachines.value,       icon: 'mdi-check-circle-outline', color: 'success' },
   { label: 'Volumes',       value: volumesStore.items.length,   icon: 'mdi-database-outline',   color: 'info',      sub: formatStorage() },
-  { label: 'Networks',      value: networksStore.networks.length, icon: 'mdi-lan',              color: 'accent' },
+  { label: 'Networks',      value: networksStore.items.length, icon: 'mdi-lan',              color: 'accent' },
   { label: 'Virtual IPs',   value: vipsStore.items.length,      icon: 'mdi-earth',              color: 'secondary' },
   { label: 'Load Balancers',value: lbsStore.items.length,       icon: 'mdi-scale-balance',      color: 'warning' },
 ])
@@ -231,7 +231,7 @@ const recentResources = computed(() => {
   volumesStore.items.slice(0,3).forEach(v => rows.push({
     name: v.name, type: 'Volume', status: v.state || '—', created: shortDate(v.createdAt), link: `/volumes/${v.name}`
   }))
-  networksStore.networks.slice(0,2).forEach(n => rows.push({
+  networksStore.items.slice(0,2).forEach((n: { name: string; createdAt?: string }) => rows.push({
     name: n.name, type: 'Network', status: 'Active', created: shortDate(n.createdAt), link: `/networks/${n.name}`
   }))
   return rows.sort((a,b) => b.created.localeCompare(a.created)).slice(0, 8)
@@ -257,7 +257,6 @@ const quickActions = [
 ]
 
 onMounted(async () => {
-  const ns = nsStore.active
   await Promise.all([
     machinesStore.load(),
     volumesStore.load(),

@@ -1,20 +1,22 @@
 <template>
   <v-container fluid class="pa-6">
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <h1 class="text-h5 font-weight-bold">Networking</h1>
-        <div class="text-caption text-medium-emphasis">{{ nsStore.active }}</div>
-      </div>
-      <v-btn color="primary" prepend-icon="mdi-plus" :to="{ path: '/networks/new' }">Create Network</v-btn>
-    </div>
+    <PageHeader
+      title="Networking"
+      subtitle="Networks and network interfaces"
+      icon="mdi-lan"
+    >
+      <template #actions>
+        <v-btn color="primary" prepend-icon="mdi-plus" :to="{ path: '/networks/new' }">Create Network</v-btn>
+      </template>
+    </PageHeader>
 
     <v-row dense class="mb-6">
-      <v-col cols="auto"><StatCard label="Available" :value="availableCount" color="#16a34a" /></v-col>
-      <v-col cols="auto"><StatCard label="Pending"   :value="pendingCount"   color="#d97706" /></v-col>
-      <v-col cols="auto"><StatCard label="Total"     :value="networks.length" /></v-col>
+      <v-col cols="auto"><StatCard label="Available" :value="availableCount" icon="mdi-check-circle-outline" color="success" /></v-col>
+      <v-col cols="auto"><StatCard label="Pending"   :value="pendingCount"   icon="mdi-clock-outline"        color="warning" /></v-col>
+      <v-col cols="auto"><StatCard label="Total"     :value="networks.length" icon="mdi-lan"                 color="primary" /></v-col>
     </v-row>
 
-    <v-card v-if="networks.length === 0 && !loading" variant="outlined" rounded="lg" class="mb-6">
+    <v-card v-if="networks.length === 0 && !loading" :style="cardStyle" variant="flat" rounded="lg" class="mb-6">
       <v-card-text class="text-center pa-12">
         <v-icon size="48" color="medium-emphasis" class="mb-4">mdi-lan-disconnect</v-icon>
         <div class="text-h6 mb-2">No networks yet</div>
@@ -23,12 +25,12 @@
       </v-card-text>
     </v-card>
 
-    <v-card v-else variant="outlined" rounded="lg" class="mb-6">
-      <v-card-title class="d-flex align-center ga-2 pa-4 bg-grey-lighten-5">
+    <v-card v-else :style="cardStyle" variant="flat" rounded="lg" class="mb-6">
+      <div class="d-flex align-center ga-2 pa-4" :style="headerStyle">
         <v-icon color="primary">mdi-lan</v-icon>
-        Networks
+        <span class="font-weight-bold">Networks</span>
         <v-chip size="x-small" color="primary">{{ networks.length }}</v-chip>
-      </v-card-title>
+      </div>
       <v-data-table :headers="netHeaders" :items="networks" :loading="loading" density="compact" hover no-data-text="No networks">
         <template #item.name="{ item }">
           <router-link :to="`/networks/${item.name}`" class="text-primary text-decoration-none font-weight-medium">{{ item.name }}</router-link>
@@ -39,12 +41,12 @@
       </v-data-table>
     </v-card>
 
-    <v-card variant="outlined" rounded="lg">
-      <v-card-title class="d-flex align-center ga-2 pa-4 bg-grey-lighten-5">
+    <v-card :style="cardStyle" variant="flat" rounded="lg">
+      <div class="d-flex align-center ga-2 pa-4" :style="headerStyle">
         <v-icon color="primary">mdi-network-outline</v-icon>
-        Network Interfaces
+        <span class="font-weight-bold">Network Interfaces</span>
         <v-chip size="x-small" color="primary">{{ interfaces.length }}</v-chip>
-      </v-card-title>
+      </div>
       <v-data-table :headers="nicHeaders" :items="interfaces" :loading="loading" density="compact" hover no-data-text="No network interfaces">
         <template #item.state="{ item }"><StatusBadge :state="item.state" /></template>
         <template #item.ips="{ item }">
@@ -70,12 +72,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useTheme } from 'vuetify'
 import { api, type Network, type NetworkInterface } from '@/api/client'
 import { useNamespaceStore } from '@/stores/namespace'
-import StatusBadge from '@/components/StatusBadge.vue'
-import StatCard from '@/components/StatCard.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
+import StatCard from '@/components/common/StatCard.vue'
 
 const nsStore    = useNamespaceStore()
+const theme      = useTheme()
 const networks   = ref<Network[]>([])
 const interfaces = ref<NetworkInterface[]>([])
 const loading    = ref(false)
@@ -83,6 +88,16 @@ const loadError  = ref<string | null>(null)
 const deleteDialog = ref(false)
 const deleteTarget = ref('')
 const deleting     = ref(false)
+
+const isDark = computed(() => theme.global.current.value.dark)
+const cardStyle = computed(() => ({
+  background: isDark.value ? 'rgba(20,30,51,0.8)' : '#ffffff',
+  border: `1px solid ${isDark.value ? 'rgba(129,140,248,0.1)' : 'rgba(0,0,0,0.12)'}`,
+}))
+const headerStyle = computed(() => ({
+  background: isDark.value ? 'rgba(14,21,40,0.9)' : '#f8fafc',
+  borderBottom: `1px solid ${isDark.value ? 'rgba(129,140,248,0.08)' : 'rgba(0,0,0,0.08)'}`,
+}))
 
 const availableCount = computed(() => networks.value.filter(n => n.state === 'Available').length)
 const pendingCount   = computed(() => networks.value.filter(n => n.state === 'Pending').length)
