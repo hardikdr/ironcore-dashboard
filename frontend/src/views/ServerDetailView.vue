@@ -10,12 +10,20 @@
       </template>
     </PageHeader>
 
-    <div v-if="loading" class="d-flex justify-center pa-12">
-      <v-progress-circular indeterminate color="primary" />
+    <template v-if="loading">
+      <v-skeleton-loader type="table-row@3" class="mb-4" />
+    </template>
+
+    <div v-else-if="loadError" class="pa-8 text-center">
+      <v-icon size="48" color="error" class="mb-3">mdi-alert-circle-outline</v-icon>
+      <div class="text-h6 mb-2">Failed to load server</div>
+      <div class="text-medium-emphasis mb-4">{{ loadError }}</div>
+      <v-btn color="primary" @click="load">Retry</v-btn>
     </div>
 
-    <div v-else-if="!server" class="text-center pa-12 text-medium-emphasis">
-      Server "{{ serverName }}" not found.
+    <div v-else-if="!server" class="pa-8 text-center text-medium-emphasis">
+      <v-icon size="48" class="mb-3">mdi-server-off</v-icon>
+      <div class="text-h6">Server "{{ serverName }}" not found</div>
     </div>
 
     <v-row v-else>
@@ -76,32 +84,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useTheme } from 'vuetify'
 import { api, type Server } from '@/api/client'
-import PageHeader from '@/components/common/PageHeader.vue'
+import { useCardStyle } from '@/composables/useCardStyle'
+import PageHeader  from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 
 const route      = useRoute()
-const theme      = useTheme()
 const serverName = route.params.name as string
 const server     = ref<Server | null>(null)
 const loading    = ref(true)
+const loadError  = ref<string | null>(null)
 
-const isDark = computed(() => theme.global.current.value.dark)
-const cardStyle = computed(() => ({
-  background: isDark.value ? 'rgba(20,30,51,0.8)' : '#ffffff',
-  border: `1px solid ${isDark.value ? 'rgba(129,140,248,0.1)' : 'rgba(0,0,0,0.12)'}`,
-}))
+const { cardStyle } = useCardStyle()
 
 async function load() {
   loading.value = true
+  loadError.value = null
   try {
     const all = await api.servers.list()
     server.value = all.find(s => s.name === serverName) ?? null
-  } catch {
-    server.value = null
+  } catch (e: unknown) {
+    loadError.value = e instanceof Error ? e.message : String(e)
   } finally {
     loading.value = false
   }
