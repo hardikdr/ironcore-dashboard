@@ -42,3 +42,6 @@ default.etcd/
 .cursor/
 .gemini/
 docs/superpowers/
+
+# Git worktrees
+.worktrees/
