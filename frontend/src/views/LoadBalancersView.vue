@@ -1,20 +1,22 @@
 <template>
   <v-container fluid class="pa-6">
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <h1 class="text-h5 font-weight-bold">Load Balancers</h1>
-        <div class="text-caption text-medium-emphasis">{{ nsStore.active }}</div>
-      </div>
-      <v-btn color="primary" prepend-icon="mdi-plus" :to="{ path: '/loadbalancers/new' }">Create Load Balancer</v-btn>
-    </div>
+    <PageHeader
+      title="Load Balancers"
+      subtitle="Traffic distribution endpoints"
+      icon="mdi-scale-balance"
+    >
+      <template #actions>
+        <v-btn color="primary" prepend-icon="mdi-plus" :to="{ path: '/loadbalancers/new' }">Create Load Balancer</v-btn>
+      </template>
+    </PageHeader>
 
     <v-row dense class="mb-6">
-      <v-col cols="auto"><StatCard label="Public"   :value="publicCount"   color="#1a5fa8" /></v-col>
-      <v-col cols="auto"><StatCard label="Internal" :value="internalCount" color="#475569" /></v-col>
-      <v-col cols="auto"><StatCard label="Total"    :value="items.length" /></v-col>
+      <v-col cols="auto"><StatCard label="Public"   :value="publicCount"   icon="mdi-earth"        color="info"      /></v-col>
+      <v-col cols="auto"><StatCard label="Internal" :value="internalCount" icon="mdi-lock-outline"  color="secondary" /></v-col>
+      <v-col cols="auto"><StatCard label="Total"    :value="items.length"  icon="mdi-scale-balance" color="primary"   /></v-col>
     </v-row>
 
-    <v-card v-if="items.length === 0 && !loading" variant="outlined" rounded="lg">
+    <v-card v-if="items.length === 0 && !loading" :style="cardStyle" variant="flat" rounded="lg">
       <v-card-text class="text-center pa-12">
         <v-icon size="48" color="medium-emphasis" class="mb-4">mdi-scale-balance</v-icon>
         <div class="text-h6 mb-2">No load balancers yet</div>
@@ -23,12 +25,12 @@
       </v-card-text>
     </v-card>
 
-    <v-card v-else variant="outlined" rounded="lg">
-      <v-card-title class="d-flex align-center ga-2 pa-4 bg-grey-lighten-5">
+    <v-card v-else :style="cardStyle" variant="flat" rounded="lg">
+      <div class="d-flex align-center ga-2 pa-4" :style="headerStyle">
         <v-icon color="primary">mdi-scale-balance</v-icon>
-        Load Balancers
+        <span class="font-weight-bold">Load Balancers</span>
         <v-chip size="x-small" color="primary">{{ items.length }}</v-chip>
-      </v-card-title>
+      </div>
       <v-data-table :headers="headers" :items="items" :loading="loading" density="compact" hover :no-data-text="loadError ?? 'No load balancers'">
         <template #item.name="{ item }">
           <router-link :to="`/loadbalancers/${item.name}`" class="text-primary text-decoration-none font-weight-medium">{{ item.name }}</router-link>
@@ -59,17 +61,30 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useTheme } from 'vuetify'
 import { api, type LoadBalancer } from '@/api/client'
 import { useNamespaceStore } from '@/stores/namespace'
-import StatCard from '@/components/StatCard.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
+import StatCard from '@/components/common/StatCard.vue'
 
 const nsStore  = useNamespaceStore()
+const theme    = useTheme()
 const items    = ref<LoadBalancer[]>([])
 const loading  = ref(false)
 const loadError = ref<string | null>(null)
 const deleteDialog = ref(false)
 const deleteTarget = ref('')
 const deleting     = ref(false)
+
+const isDark = computed(() => theme.global.current.value.dark)
+const cardStyle = computed(() => ({
+  background: isDark.value ? 'rgba(20,30,51,0.8)' : '#ffffff',
+  border: `1px solid ${isDark.value ? 'rgba(129,140,248,0.1)' : 'rgba(0,0,0,0.12)'}`,
+}))
+const headerStyle = computed(() => ({
+  background: isDark.value ? 'rgba(14,21,40,0.9)' : '#f8fafc',
+  borderBottom: `1px solid ${isDark.value ? 'rgba(129,140,248,0.08)' : 'rgba(0,0,0,0.08)'}`,
+}))
 
 const publicCount   = computed(() => items.value.filter(lb => lb.type === 'Public').length)
 const internalCount = computed(() => items.value.filter(lb => lb.type === 'Internal').length)
