@@ -6,6 +6,9 @@
       icon="mdi-view-dashboard-outline"
     />
 
+    <!-- ── Needs Attention ────────────────────────────────────────── -->
+    <NeedsAttention :items="attentionItems" class="mb-6" />
+
     <!-- ── Stats Row ────────────────────────────────────────────── -->
     <v-row class="mb-6" dense>
       <v-col v-for="s in stats" :key="s.label" cols="6" sm="4" md="2">
@@ -70,8 +73,8 @@
       </v-col>
     </v-row>
 
-    <!-- ── Recent Activity + Health Summary ───────────────────────── -->
-    <v-row>
+    <!-- ── Recent Resources + Sidebar ───────────────────────────── -->
+    <v-row class="mb-6">
       <v-col cols="12" md="8">
         <v-card :style="cardStyle" class="pa-4">
           <div class="text-subtitle-2 font-weight-bold mb-4 d-flex align-center ga-2">
@@ -79,7 +82,7 @@
             Recent Resources
           </div>
 
-          <!-- Attention items -->
+          <!-- Attention chips inline -->
           <div v-if="pendingMachines || errorVolumes" class="d-flex flex-wrap ga-2 mb-3">
             <v-chip
               v-if="pendingMachines"
@@ -129,7 +132,7 @@
 
       <v-col cols="12" md="4">
         <!-- Health Summary -->
-        <v-card :style="cardStyle" class="pa-4">
+        <v-card :style="cardStyle" class="pa-4 mb-4">
           <div class="text-subtitle-2 font-weight-bold mb-4 d-flex align-center ga-2">
             <v-icon size="16" :color="healthColor">mdi-heart-pulse</v-icon>
             Health Summary
@@ -157,7 +160,7 @@
         </v-card>
 
         <!-- Namespace info -->
-        <v-card :style="cardStyle" class="pa-4 mt-4">
+        <v-card :style="cardStyle" class="pa-4">
           <div class="text-subtitle-2 font-weight-bold mb-3 d-flex align-center ga-2">
             <v-icon size="16" color="primary">mdi-folder-outline</v-icon>
             Active Namespace
@@ -171,18 +174,79 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <!-- ── Recent Events ──────────────────────────────────────────── -->
+    <v-row>
+      <v-col cols="12">
+        <v-card :style="cardStyle" class="pa-4">
+          <div class="d-flex align-center justify-space-between mb-4">
+            <div class="text-subtitle-2 font-weight-bold d-flex align-center ga-2">
+              <v-icon size="16" color="warning">mdi-bell-outline</v-icon>
+              Recent Warning Events
+            </div>
+            <v-btn
+              v-if="recentEvents.length > 0"
+              variant="text"
+              size="small"
+              to="/operations"
+              append-icon="mdi-chevron-right"
+            >
+              View all
+            </v-btn>
+          </div>
+
+          <!-- Loading -->
+          <div v-if="eventsLoading" class="d-flex justify-center py-4">
+            <v-progress-circular indeterminate size="24" />
+          </div>
+
+          <!-- Empty state -->
+          <div v-else-if="recentEvents.length === 0" class="d-flex align-center ga-2 text-medium-emphasis py-2">
+            <v-icon size="18" color="success">mdi-check-circle-outline</v-icon>
+            <span class="text-body-2">No warning events in this namespace</span>
+          </div>
+
+          <!-- Events table -->
+          <div v-else>
+            <div
+              v-for="ev in recentEvents"
+              :key="`${ev.name}-${ev.lastTime}`"
+              class="d-flex align-start py-2 ga-3"
+              style="border-bottom: 1px solid rgba(128,128,128,0.08);"
+            >
+              <v-icon
+                :color="ev.type === 'Warning' ? 'warning' : 'info'"
+                size="16"
+                class="mt-1 flex-shrink-0"
+              >
+                {{ ev.type === 'Warning' ? 'mdi-alert' : 'mdi-information' }}
+              </v-icon>
+              <div class="flex-grow-1 min-width-0">
+                <div class="text-body-2">
+                  <span class="font-weight-medium">{{ ev.regarding }}</span>
+                  <v-chip size="x-small" variant="tonal" class="ml-1" :color="kindColor(ev.regardsKind)">{{ ev.regardsKind }}</v-chip>
+                </div>
+                <div class="text-caption text-medium-emphasis text-truncate">{{ ev.reason }}: {{ ev.message }}</div>
+              </div>
+              <div class="text-caption text-medium-emphasis flex-shrink-0">{{ relativeTime(ev.lastTime) }}</div>
+            </div>
+          </div>
+        </v-card>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useCardStyle }  from '@/composables/useCardStyle'
 import { relativeTime }  from '@/composables/useTime'
-import PageHeader   from '@/components/common/PageHeader.vue'
-import StatCard     from '@/components/common/StatCard.vue'
-import StatusBadge  from '@/components/common/StatusBadge.vue'
-import DonutChart   from '@/components/charts/DonutChart.vue'
-import OverviewRow  from '@/components/common/OverviewRow.vue'
+import PageHeader    from '@/components/common/PageHeader.vue'
+import StatCard      from '@/components/common/StatCard.vue'
+import StatusBadge   from '@/components/common/StatusBadge.vue'
+import DonutChart    from '@/components/charts/DonutChart.vue'
+import OverviewRow   from '@/components/common/OverviewRow.vue'
+import NeedsAttention, { type AttentionItem } from '@/components/common/NeedsAttention.vue'
 import { useMachinesStore }   from '@/stores/machines'
 import { useVolumesStore }    from '@/stores/volumes'
 import { useNetworksStore }   from '@/stores/networks'
@@ -190,9 +254,9 @@ import { useVirtualIPsStore } from '@/stores/virtualips'
 import { useLoadBalancersStore } from '@/stores/loadbalancers'
 import { usePrefixesStore }   from '@/stores/prefixes'
 import { useNamespaceStore }  from '@/stores/namespace'
+import { api, type ResourceEvent } from '@/api/client'
 
-const theme = useCardStyle()
-const { cardStyle } = theme
+const { cardStyle } = useCardStyle()
 
 const machinesStore  = useMachinesStore()
 const volumesStore   = useVolumesStore()
@@ -201,6 +265,33 @@ const vipsStore      = useVirtualIPsStore()
 const lbsStore       = useLoadBalancersStore()
 const prefixesStore  = usePrefixesStore()
 const nsStore        = useNamespaceStore()
+
+// ── Events ─────────────────────────────────────────────────────────
+const eventsLoading = ref(false)
+const events = ref<ResourceEvent[]>([])
+
+async function loadEvents() {
+  eventsLoading.value = true
+  try {
+    events.value = await api.events.list(nsStore.active)
+  } catch {
+    events.value = []
+  } finally {
+    eventsLoading.value = false
+  }
+}
+
+const recentEvents = computed(() =>
+  events.value
+    .filter(e => e.type === 'Warning')
+    .sort((a, b) => (b.lastTime > a.lastTime ? 1 : -1))
+    .slice(0, 6)
+)
+
+function kindColor(kind: string) {
+  const m: Record<string, string> = { Machine: 'primary', Volume: 'info', Network: 'accent' }
+  return m[kind] ?? 'secondary'
+}
 
 // ── Stats ──────────────────────────────────────────────────────────
 const stats = computed(() => [
@@ -247,14 +338,56 @@ const volumeSegments = computed(() => {
   ].filter(s => s.value > 0)
 })
 
-// ── Health Summary ─────────────────────────────────────────────────
+// ── Needs Attention ────────────────────────────────────────────────
 const pendingMachines = computed(() =>
   machinesStore.items.filter(m => m.state?.toLowerCase() === 'pending').length
 )
 const errorVolumes = computed(() =>
   volumesStore.items.filter(v => v.state && !['available', 'bound'].includes(v.state.toLowerCase())).length
 )
+const warningEvents = computed(() =>
+  events.value.filter(e => e.type === 'Warning').length
+)
 
+const attentionItems = computed(() => {
+  const items: AttentionItem[] = []
+  if (pendingMachines.value > 0) {
+    items.push({
+      key: 'pending-machines',
+      label: `machine${pendingMachines.value > 1 ? 's' : ''} pending`,
+      count: pendingMachines.value,
+      icon: 'mdi-timer-sand',
+      color: 'warning',
+      link: '/machines',
+      detail: 'Waiting for scheduling or hardware',
+    })
+  }
+  if (errorVolumes.value > 0) {
+    items.push({
+      key: 'error-volumes',
+      label: `volume${errorVolumes.value > 1 ? 's' : ''} with issues`,
+      count: errorVolumes.value,
+      icon: 'mdi-alert-circle-outline',
+      color: 'error',
+      link: '/volumes',
+      detail: 'Not available or in error state',
+    })
+  }
+  if (warningEvents.value > 0) {
+    items.push({
+      key: 'warning-events',
+      label: `warning event${warningEvents.value > 1 ? 's' : ''}`,
+      count: warningEvents.value,
+      icon: 'mdi-bell-alert-outline',
+      color: 'warning',
+      link: '/operations',
+      detail: 'Recent warnings from Kubernetes events',
+    })
+  }
+  return items
+})
+
+// ── Health Summary ─────────────────────────────────────────────────
 const healthItems = computed(() => {
   const items: { label: string; count: number; icon: string; color: string; link: string }[] = []
   if (pendingMachines.value > 0) {
@@ -312,7 +445,6 @@ function typeColor(type: string) {
   return m[type] ?? 'secondary'
 }
 
-
 onMounted(async () => {
   await Promise.all([
     machinesStore.load(),
@@ -321,6 +453,7 @@ onMounted(async () => {
     vipsStore.load(),
     lbsStore.load(),
     prefixesStore.load(),
+    loadEvents(),
   ])
 })
 </script>

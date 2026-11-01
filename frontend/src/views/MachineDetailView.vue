@@ -38,15 +38,12 @@
     </div>
 
     <template v-else-if="machine">
-      <!-- Status chips -->
-      <div class="d-flex flex-wrap ga-2 mb-4">
-        <StatusBadge :state="machine.state" />
-        <v-chip size="small" variant="tonal" color="info" prepend-icon="mdi-chip">{{ machine.machineClass }}</v-chip>
-        <CopyChip v-for="ip in machine.ips" :key="ip" :text="ip" color="accent" />
-        <v-chip v-if="machine.image" size="small" variant="outlined" prepend-icon="mdi-disc">
-          <span style="max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ machine.image }}</span>
-        </v-chip>
-      </div>
+      <!-- Resource header strip -->
+      <ResourceHeader
+        :state="machine.state"
+        :created-at="machine.createdAt"
+        :chips="machineHeaderChips"
+      />
 
       <!-- Tabs -->
       <v-tabs v-model="tab" color="primary" class="mb-4">
@@ -54,7 +51,8 @@
           <v-icon size="16" class="mr-1">mdi-information-outline</v-icon>Overview
         </v-tab>
         <v-tab value="terminal">
-          <v-icon size="16" class="mr-1">mdi-console</v-icon>Terminal
+          <v-icon size="16" class="mr-1">mdi-console</v-icon>
+          {{ isDemoMode ? 'Console (Demo)' : 'Console' }}
         </v-tab>
         <v-tab value="networking">
           <v-icon size="16" class="mr-1">mdi-lan</v-icon>Networking
@@ -273,7 +271,9 @@ import { useNamespaceStore } from '@/stores/namespace'
 import { useMachinesStore } from '@/stores/machines'
 import { useCardStyle } from '@/composables/useCardStyle'
 import { relativeTime, absoluteTime } from '@/composables/useTime'
+import { useAppMode } from '@/composables/useAppMode'
 import PageHeader      from '@/components/common/PageHeader.vue'
+import ResourceHeader  from '@/components/common/ResourceHeader.vue'
 import StatusBadge     from '@/components/common/StatusBadge.vue'
 import CopyChip        from '@/components/common/CopyChip.vue'
 import ResourceEvents    from '@/components/common/ResourceEvents.vue'
@@ -289,6 +289,7 @@ const route   = useRoute()
 const nsStore = useNamespaceStore()
 const machinesStore = useMachinesStore()
 const { cardStyle } = useCardStyle()
+const { isDemoMode, load: loadMode } = useAppMode()
 
 const machineName = route.params.name as string
 const tab         = ref('overview')
@@ -300,6 +301,17 @@ const nics        = ref<NetworkInterface[]>([])
 const nicsLoading = ref(false)
 
 const consoleUrl = computed(() => wsConsoleUrl(nsStore.active, machineName))
+
+const machineHeaderChips = computed(() => {
+  if (!machine.value) return []
+  const m = machine.value
+  const chips: Array<{ label: string; value: string; icon: string; color: string }> = [
+    { label: 'Class', value: m.machineClass, icon: 'mdi-chip', color: 'info' },
+    { label: 'Power', value: m.power, icon: m.power === 'On' ? 'mdi-power' : 'mdi-power-off', color: m.power === 'On' ? 'success' : 'default' },
+  ]
+  m.ips.forEach(ip => chips.push({ label: 'IP', value: ip, icon: 'mdi-ip-outline', color: 'accent' }))
+  return chips
+})
 
 async function load() {
   loading.value = true
@@ -337,5 +349,8 @@ async function togglePower() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  loadMode()
+  load()
+})
 </script>

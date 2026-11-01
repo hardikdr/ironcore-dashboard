@@ -1,20 +1,29 @@
 <template>
   <div ref="container" class="terminal-container">
-    <!-- Connection status bar -->
-    <div class="term-statusbar d-flex align-center ga-2 px-3 py-1">
-      <v-icon :color="currentColor" size="10">mdi-circle</v-icon>
-      <span class="text-caption" :style="{ color: currentColor }">{{ currentLabel }}</span>
-      <v-spacer />
-      <v-btn
-        v-if="showReconnect"
-        size="x-small"
-        variant="tonal"
-        color="primary"
-        prepend-icon="mdi-refresh"
-        @click="manualReconnect"
-      >Reconnect</v-btn>
+    <!-- Console unavailable banner (real mode) -->
+    <div v-if="consoleError" class="console-unavailable d-flex flex-column align-center justify-center pa-8 text-center">
+      <v-icon size="48" color="warning" class="mb-4">mdi-console-line</v-icon>
+      <div class="text-subtitle-1 font-weight-bold mb-2">Console Unavailable</div>
+      <div class="text-body-2 text-medium-emphasis" style="max-width:420px">{{ consoleError }}</div>
     </div>
-    <div ref="termEl" class="term-body" />
+
+    <template v-else>
+      <!-- Connection status bar -->
+      <div class="term-statusbar d-flex align-center ga-2 px-3 py-1">
+        <v-icon :color="currentColor" size="10">mdi-circle</v-icon>
+        <span class="text-caption" :style="{ color: currentColor }">{{ currentLabel }}</span>
+        <v-spacer />
+        <v-btn
+          v-if="showReconnect"
+          size="x-small"
+          variant="tonal"
+          color="primary"
+          prepend-icon="mdi-refresh"
+          @click="manualReconnect"
+        >Reconnect</v-btn>
+      </div>
+      <div ref="termEl" class="term-body" />
+    </template>
   </div>
 </template>
 
@@ -40,6 +49,7 @@ const currentColor = computed(() => STATUS_COLOR[status.value])
 const currentLabel = computed(() => STATUS_LABEL[status.value])
 
 const showReconnect = ref(false)
+const consoleError  = ref<string | null>(null)
 
 let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
@@ -91,6 +101,16 @@ function connect() {
   }
 
   ws.onmessage = (ev) => {
+    if (typeof ev.data === 'string') {
+      try {
+        const frame = JSON.parse(ev.data) as { type?: string; message?: string }
+        if (frame.type === 'error') {
+          consoleError.value = frame.message ?? 'Console unavailable.'
+          disconnect()
+          return
+        }
+      } catch { /* not JSON — pass through to terminal */ }
+    }
     terminal?.write(typeof ev.data === 'string' ? ev.data : new Uint8Array(ev.data))
   }
 
@@ -171,6 +191,11 @@ onUnmounted(dispose)
   background: #0d1117;
   border-radius: 8px;
   overflow: hidden;
+}
+.console-unavailable {
+  flex: 1;
+  background: #0d1117;
+  color: #c9d1d9;
 }
 .term-statusbar {
   background: rgba(0,0,0,0.4);

@@ -30,7 +30,19 @@
       <v-btn color="primary" @click="load">Retry</v-btn>
     </div>
 
-    <v-row v-else-if="detail">
+    <template v-if="detail && !loading">
+      <ResourceHeader
+        :state="detail.state"
+        :created-at="detail.createdAt"
+        :chips="[
+          { label: 'Class', value: detail.volumeClass, icon: 'mdi-database', color: 'info' },
+          { label: 'Size',  value: `${detail.sizeGiB} GiB`, icon: 'mdi-harddisk' },
+          ...(detail.machineRef ? [{ label: 'Attached to', value: detail.machineRef, icon: 'mdi-server', color: 'primary' }] : []),
+        ]"
+      />
+    </template>
+
+    <v-row v-if="!loading && !loadError && detail">
       <v-col cols="12" md="6">
         <v-card :style="cardStyle" variant="flat" rounded="lg" class="pa-4">
           <div class="text-subtitle-2 font-weight-bold mb-4 d-flex align-center ga-2">
@@ -145,6 +157,7 @@ import { useNamespaceStore } from '@/stores/namespace'
 import { useCardStyle } from '@/composables/useCardStyle'
 import { relativeTime, absoluteTime } from '@/composables/useTime'
 import PageHeader      from '@/components/common/PageHeader.vue'
+import ResourceHeader  from '@/components/common/ResourceHeader.vue'
 import StatusBadge     from '@/components/common/StatusBadge.vue'
 import CopyChip        from '@/components/common/CopyChip.vue'
 import ResourceEvents  from '@/components/common/ResourceEvents.vue'
