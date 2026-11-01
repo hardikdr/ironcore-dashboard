@@ -281,6 +281,20 @@ type BucketPoolResponse struct {
 	CreatedAt              string   `json:"createdAt"`
 }
 
+// EventResponse is a Kubernetes Event, filtered by regardingName/kind.
+type EventResponse struct {
+	Namespace  string `json:"namespace"`
+	Name       string `json:"name"`
+	Reason     string `json:"reason"`
+	Message    string `json:"message"`
+	Type       string `json:"type"` // Normal or Warning
+	Count      int32  `json:"count"`
+	FirstTime  string `json:"firstTime"`
+	LastTime   string `json:"lastTime"`
+	Regarding  string `json:"regarding"`
+	RegardsKind string `json:"regardsKind"`
+}
+
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

@@ -153,6 +153,9 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dyna
 	})
 	r.Get("/api/v1/namespaces/{ns}/resourcequotas", api.NewResourceQuotaHandler(cs).List)
 
+	// Kubernetes Events (k8s client)
+	r.Get("/api/v1/namespaces/{ns}/events", api.NewEventHandler(k8sClient).List)
+
 	// Phase 4: NetworkPolicies, Buckets, BucketClasses, BucketPools
 	np4 := api.NewNetworkPolicyHandler(cs)
 	r.Get("/api/v1/namespaces/{ns}/networkpolicies", np4.List)
