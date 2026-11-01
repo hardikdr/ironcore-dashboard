@@ -103,6 +103,24 @@ var demoFixtures = map[string]any{
 			CreatedAt: demoNow2d,
 		},
 	},
+
+	// Phase 4
+	"networkpolicies": []NetworkPolicyResponse{
+		{Name: "allow-web-ingress", Namespace: "default", NetworkRef: "prod-network", PolicyTypes: []string{"Ingress"}, IngressRules: 2, EgressRules: 0, CreatedAt: demoNow1d},
+		{Name: "restrict-egress", Namespace: "default", NetworkRef: "prod-network", PolicyTypes: []string{"Egress"}, IngressRules: 0, EgressRules: 1, CreatedAt: demoNow2h},
+	},
+	"buckets": []BucketResponse{
+		{Name: "assets-bucket", Namespace: "default", BucketClassRef: "standard-s3", BucketPoolRef: "bucket-pool-eu", State: "Available", Endpoint: "https://assets-bucket.storage.example.com", CreatedAt: demoNow2d},
+		{Name: "backup-bucket", Namespace: "default", BucketClassRef: "standard-s3", BucketPoolRef: "bucket-pool-eu", State: "Available", Endpoint: "https://backup-bucket.storage.example.com", CreatedAt: demoNow1d},
+		{Name: "ml-data-bucket", Namespace: "default", BucketClassRef: "fast-s3", BucketPoolRef: "bucket-pool-eu", State: "Pending", Endpoint: "", CreatedAt: demoNow1h},
+	},
+	"bucketclasses": []BucketClassResponse{
+		{Name: "standard-s3", Capabilities: map[string]string{"tps": "1000", "iops": "3000"}, CreatedAt: demoNow2d},
+		{Name: "fast-s3", Capabilities: map[string]string{"tps": "5000", "iops": "16000"}, CreatedAt: demoNow2d},
+	},
+	"bucketpools": []BucketPoolResponse{
+		{Name: "bucket-pool-eu", State: "Available", AvailableBucketClasses: []string{"standard-s3", "fast-s3"}, CreatedAt: demoNow2d},
+	},
 }
 
 // MachineClassResponse is here since it's not in types.go yet.
@@ -143,6 +161,15 @@ func (d *DemoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if path == "/volumepools" {
 		writeJSON(w, http.StatusOK, demoFixtures["volumepools"])
+		return
+	}
+	// Phase 4 cluster-scoped
+	if path == "/bucketclasses" {
+		writeJSON(w, http.StatusOK, demoFixtures["bucketclasses"])
+		return
+	}
+	if path == "/bucketpools" {
+		writeJSON(w, http.StatusOK, demoFixtures["bucketpools"])
 		return
 	}
 
@@ -257,6 +284,10 @@ func (d *DemoHandler) handleResource(w http.ResponseWriter, r *http.Request, res
 		writeJSON(w, http.StatusOK, demoFixtures["prefixallocations"])
 	case "resourcequotas":
 		writeJSON(w, http.StatusOK, demoFixtures["resourcequotas"])
+	case "networkpolicies":
+		writeJSON(w, http.StatusOK, demoFixtures["networkpolicies"])
+	case "buckets":
+		writeJSON(w, http.StatusOK, demoFixtures["buckets"])
 	case "virtualips":
 		list := demoFixtures["virtualips"].([]VirtualIPResponse)
 		if name == "" {

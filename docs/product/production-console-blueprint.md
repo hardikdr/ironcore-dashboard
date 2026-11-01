@@ -1,7 +1,7 @@
 # IronCore Dashboard — Production Console Blueprint
 
-> Status: Draft v1.0 · 2026-11-01  
-> Scope: Covers Phase 1 audit through Phase 3 delivery. Updated as work progresses.
+> Status: Draft v2.0 · 2026-11-01  
+> Scope: Covers Phase 0–4 delivery. Updated to reflect Phase 3 shipped, Phase 4 in progress.
 
 ---
 
@@ -34,235 +34,234 @@ Reads audit information, reviews resource quotas, and validates that tenants are
 
 ## 2. IronCore CRD Capability Matrix
 
+Legend: ✅ Fully implemented (real API + frontend) · ⚠️ Demo-only (no real API handler) · 🔧 Partial (real API but limited UI) · ❌ Not implemented
+
 ### 2.1 Compute (`compute.ironcore.dev/v1alpha1`)
 
-| CRD | API Backed | List | Detail | Create | Delete | Power |
-|-----|-----------|------|--------|--------|--------|-------|
-| `Machine` | ✅ Yes | ✅ | ✅ | ✅ | ✅ | ✅ (PATCH power) |
-| `MachineClass` | ✅ Yes | ✅ (read-only) | ❌ | ❌ | ❌ | — |
-| `MachinePool` | ❌ Not wired | ❌ | ❌ | ❌ | ❌ | — |
+| CRD | Real API | List | Detail | Create | Delete | Notes |
+|-----|---------|------|--------|--------|--------|-------|
+| `Machine` | ✅ | ✅ | ✅ | ✅ | ✅ | Power toggle (On/Off), WebSocket console, bulk delete/power |
+| `MachineClass` | ✅ | ✅ | ❌ | ❌ | ❌ | Capabilities from API; list used in Machine create wizard |
+| `MachinePool` | ✅ | ✅ | ❌ | ❌ | ❌ | Phase 3: real handler; shows available classes |
 
 **Machine states:** `Pending`, `Running`, `Terminating`  
 **Power states:** `On`, `Off`
 
 ### 2.2 Storage (`storage.ironcore.dev/v1alpha1`)
 
-| CRD | API Backed | List | Detail | Create | Delete |
-|-----|-----------|------|--------|--------|--------|
-| `Volume` | ✅ Yes | ✅ | ✅ | ✅ | ✅ |
-| `VolumeClass` | ✅ Yes | ✅ (read-only) | ❌ | ❌ | ❌ |
-| `VolumePool` | ❌ Not wired | ❌ | ❌ | ❌ | ❌ |
-| `VolumeSnapshot` | ❌ Not wired | ❌ | ❌ | ❌ | ❌ |
-| `Bucket` | ❌ Not wired | ❌ | ❌ | ❌ | ❌ |
-| `BucketClass` | ❌ Not wired | ❌ | ❌ | ❌ | ❌ |
-| `BucketPool` | ❌ Not wired | ❌ | ❌ | ❌ | ❌ |
+| CRD | Real API | List | Detail | Create | Delete | Notes |
+|-----|---------|------|--------|--------|--------|-------|
+| `Volume` | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| `VolumeClass` | ✅ | ✅ | ❌ | ❌ | ❌ | Used in Volume create wizard |
+| `VolumePool` | ✅ | ✅ | ❌ | ❌ | ❌ | Phase 3: real handler; shows available classes |
+| `VolumeSnapshot` | ✅ | ✅ | ❌ | ❌ | ✅ | Phase 3: real handler; delete wired |
+| `Bucket` | ✅ | ✅ | ❌ | ❌ | ✅ | Phase 4: real handler; S3-compatible object storage |
+| `BucketClass` | ✅ | ✅ | ❌ | ❌ | ❌ | Phase 4: cluster-scoped, read-only |
+| `BucketPool` | ✅ | ✅ | ❌ | ❌ | ❌ | Phase 4: cluster-scoped, read-only |
 
-**Volume states:** `Pending`, `Available`, `Error`
+**Volume states:** `Pending`, `Available`, `Error`  
+**Bucket states:** `Pending`, `Available`, `Error`
 
 ### 2.3 Networking (`networking.ironcore.dev/v1alpha1`)
 
-| CRD | API Backed | List | Detail | Create | Delete |
-|-----|-----------|------|--------|--------|--------|
-| `Network` | ✅ Yes | ✅ | ✅ | ✅ | ✅ |
-| `NetworkInterface` | ✅ Yes | ✅ (via Network) | ❌ | ❌ | ❌ |
-| `VirtualIP` | ✅ Yes | ✅ | ✅ | ✅ | ✅ |
-| `LoadBalancer` | ✅ Yes | ✅ | ✅ | ✅ | ✅ |
-| `NATGateway` | ❌ Not wired | ❌ | ❌ | ❌ | ❌ |
-| `NetworkPolicy` | ❌ Not wired | ❌ | ❌ | ❌ | ❌ |
-| `LoadBalancerRouting` | ❌ Not wired | ❌ | ❌ | ❌ | ❌ |
+| CRD | Real API | List | Detail | Create | Delete | Notes |
+|-----|---------|------|--------|--------|--------|-------|
+| `Network` | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| `NetworkInterface` | ✅ | ✅ | ❌ | ❌ | ❌ | Listed via Networks detail tab + standalone /networkinterfaces; owned by machines |
+| `VirtualIP` | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| `LoadBalancer` | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| `NATGateway` | ✅ | ✅ | ❌ | ❌ | ✅ | Phase 3: real handler |
+| `NetworkPolicy` | ✅ | ✅ | ❌ | ❌ | ❌ | Phase 4: real handler; read-only (infrastructure-managed) |
+| `LoadBalancerRouting` | ❌ | ❌ | ❌ | ❌ | ❌ | Shown inline on LoadBalancer detail only |
 
 ### 2.4 IPAM (`ipam.ironcore.dev/v1alpha1`)
 
-| CRD | API Backed | List | Detail | Create | Delete |
-|-----|-----------|------|--------|--------|--------|
-| `Prefix` | ✅ Yes | ✅ | ✅ | ✅ | ✅ |
-| `PrefixAllocation` | ❌ Not wired | ❌ | ❌ | ❌ | ❌ |
+| CRD | Real API | List | Detail | Create | Delete | Notes |
+|-----|---------|------|--------|--------|--------|-------|
+| `Prefix` | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| `PrefixAllocation` | ✅ | ✅ | ❌ | ❌ | ❌ | Phase 3: real handler; namespace-scoped list |
 
 ### 2.5 Core (`core.ironcore.dev/v1alpha1`)
 
-| CRD | API Backed | List | Detail | Create | Delete |
-|-----|-----------|------|--------|--------|--------|
-| `ResourceQuota` | ❌ Not wired | ❌ | ❌ | ❌ | ❌ |
+| CRD | Real API | List | Detail | Create | Delete | Notes |
+|-----|---------|------|--------|--------|--------|-------|
+| `ResourceQuota` | ✅ | ✅ | ❌ | ❌ | ❌ | Phase 3: real handler; shows hard/used with progress bars |
 
 ### 2.6 Metal (`metal.ironcore.dev/v1alpha1` via metal-operator)
 
-| CRD | API Backed | List | Detail | Create | Delete |
-|-----|-----------|------|--------|--------|--------|
-| `Server` | ✅ Yes (dynamic) | ✅ | ✅ | ❌ | ❌ |
+| CRD | Real API | List | Detail | Create | Delete | Notes |
+|-----|---------|------|--------|--------|--------|-------|
+| `Server` | ✅ (dynamic) | ✅ | ✅ | ❌ | ❌ | BMC address, power state, claim status |
 
 ---
 
 ## 3. Navigation Architecture
 
-The navigation is grouped into verticals that match operator mental models, not API groups. Each vertical maps to a section of sidebar navigation.
-
 ```
 IronCore Dashboard
-├── Overview                    /overview        (dashboard with stat cards)
+├── Overview                    /overview
 ├── Compute
-│   ├── Machines                /machines        ✅ implemented
-│   ├── Machine Classes         /machineclasses  planned Phase 3
-│   └── Machine Pools           /machinepools    planned Phase 3
+│   ├── Machines                /machines        ✅ Full CRUD + power + console
+│   ├── Machine Pools           /machinepools    ✅ Read-only
+│   └── Topology                /topology        ✅ Visual graph
 ├── Storage
-│   ├── Volumes                 /volumes         ✅ implemented
-│   ├── Volume Classes          /volumeclasses   planned Phase 3
-│   ├── Volume Pools            /volumepools     planned Phase 3
-│   └── Snapshots               /snapshots       planned Phase 3
+│   ├── Volumes                 /volumes         ✅ Full CRUD
+│   └── Snapshots               /volumesnapshots ✅ List + delete
 ├── Networking
-│   ├── Networks                /networks        ✅ implemented
-│   ├── Network Interfaces      /networkinterfaces planned Phase 3
-│   ├── Virtual IPs             /virtualips      ✅ implemented
-│   ├── Load Balancers          /loadbalancers   ✅ implemented
-│   ├── NAT Gateways            /natgateways     planned Phase 3
-│   └── Network Policies        /networkpolicies planned Phase 3
+│   ├── Networks                /networks        ✅ Full CRUD
+│   ├── Virtual IPs             /virtualips      ✅ Full CRUD
+│   ├── Load Balancers          /loadbalancers   ✅ Full CRUD
+│   ├── NAT Gateways            /natgateways     ✅ List + delete
+│   ├── Network Interfaces      /networkinterfaces ✅ Read-only list (Phase 4)
+│   └── Network Policies        /networkpolicies ✅ Read-only list (Phase 4)
+├── Object Storage
+│   ├── Buckets                 /buckets         ✅ List + delete (Phase 4)
+│   ├── Bucket Classes          /bucketclasses   ✅ Read-only (Phase 4)
+│   └── Bucket Pools            /bucketpools     ✅ Read-only (Phase 4)
 ├── IPAM
-│   └── IP Prefixes             /prefixes        ✅ implemented
+│   └── IP Prefixes             /prefixes        ✅ Full CRUD
 ├── Operations
-│   └── Servers                 /servers         ✅ implemented (metal-operator)
-└── Administration
-    └── Settings                /settings        ✅ implemented
+│   ├── Servers                 /servers         ✅ Read-only (metal-operator)
+│   └── Resource Quotas         /resourcequotas  ✅ Read-only with usage meters
+└── Settings                    /settings        ✅
 ```
 
-**Not in navigation** (hidden from Phase 1):
-- `PrefixAllocation` — view-only sub-resource of Prefix, shown inline on Prefix detail
-- `LoadBalancerRouting` — inline on LoadBalancer detail
-- `BucketClass`, `BucketPool`, `Bucket` — pending API wiring (Phase 3+)
-- `ResourceQuota` — Phase 3 in Administration section
+**Sub-resources shown inline (not in nav):**
+- `PrefixAllocation` — on Prefix detail page
+- `LoadBalancerRouting` — on LoadBalancer detail
+- `NetworkInterface` — tab on Network detail (MachineRef shown as link)
 
 ---
 
-## 4. Current State vs. Production-Grade Gap
+## 4. Responsive Breakpoints
 
-### 4.1 What works today (as of `worktree-production-console`)
+| Breakpoint | Viewport | Behavior |
+|-----------|---------|---------|
+| Mobile (xs) | < 600px | Drawer closed by default, hamburger opens overlay; search collapses to icon; namespace to compact menu; refresh hidden |
+| Tablet (sm/md) | 600–1280px | Drawer open, cluster status collapses to dot icon |
+| Desktop (lg+) | > 1280px | Full bar, drawer with rail toggle |
+
+Tested at 390px, 768px, and 1440px in both light and dark themes. All 20 Playwright tests pass.
+
+---
+
+## 5. Current State vs. Production-Grade Gap
+
+### 5.1 What works today (Phase 4, branch `worktree-production-console`)
 
 | Area | State |
 |------|-------|
-| App shell (top bar, sidebar, nav drawer) | ✅ Implemented, mobile-responsive |
-| Page transitions & loading states | ✅ Polished |
-| Namespace switcher | ✅ Basic (in sidebar) |
-| CRUD for Machines, Volumes, Networks, VIPs, LBs, Prefixes | ✅ |
-| Machine power toggle | ✅ |
-| Machine WebSocket console (simulated fallback) | ✅ |
-| Server list (metal-operator) | ✅ |
-| Demo mode (no kubeconfig required) | ✅ |
-| Smoke test suite (6 tests) | ✅ All pass |
-| WCAG 2.2 AA for navigation & core actions | ✅ (aria-labels, keyboard nav, color contrast) |
+| App shell — responsive 390/768/1440, light + dark | ✅ |
+| Drawer closes on mobile nav, overlay mode | ✅ |
+| Global search (Ctrl+K, /) across all resource types | ✅ |
+| Grouped nav with localStorage collapse/expand | ✅ |
+| Pagination (20/50/100) on all list views | ✅ |
+| State filter chips on Machines, Volumes | ✅ |
+| Bulk delete + bulk power toggle on Machines | ✅ |
+| Empty states and error states with retry | ✅ |
+| CRUD: Machine, Volume, Network, VirtualIP, LoadBalancer, Prefix | ✅ |
+| Machine power toggle (On/Off via PATCH) | ✅ |
+| Machine WebSocket console (real + simulated fallback) | ✅ |
+| MachinePool, VolumePool list (real API) | ✅ |
+| VolumeSnapshot list + delete (real API) | ✅ |
+| NATGateway list + delete (real API) | ✅ |
+| NetworkInterface list (real API — both inline + standalone) | ✅ |
+| NetworkPolicy list (real API, read-only) | ✅ |
+| Bucket list + delete (real API) | ✅ |
+| BucketClass + BucketPool list (real API, read-only) | ✅ |
+| ResourceQuota with hard/used progress bars (real API) | ✅ |
+| PrefixAllocation list (real API) | ✅ |
+| Server list + detail (metal-operator, dynamic client) | ✅ |
+| Demo mode — clearly labeled, all fixtures present | ✅ |
+| Smoke tests: 20 tests, all passing | ✅ |
+| Go build: clean, no warnings | ✅ |
+| vue-tsc: clean, zero TS errors | ✅ |
 
-### 4.2 Production-grade gaps (Phases 2–3)
+### 5.2 Remaining production gaps
 
 | Gap | Impact | Priority |
 |-----|--------|----------|
-| Global search (across all resource types) | High — console unusable at scale without it | P1 |
-| Grouped nav with collapse/expand per vertical | Medium — current flat nav won't scale to 15+ items | P1 |
-| Pagination on all list views | High — lists will time-out and OOM with real clusters | P1 |
-| Column sort + filter on list views | High | P1 |
-| Bulk actions (delete, power-toggle for machines) | Medium | P2 |
-| Empty states (no machines in namespace, etc.) | Medium — UX confusion on fresh deployments | P2 |
-| Error states with retry actions | Medium | P2 |
-| Breadcrumbs on detail views | Medium | P2 |
-| Resource event log on detail views | High for debugging | P2 |
+| Bearer token forwarding / OIDC auth | Critical for production deployment | P1 |
+| Per-request Kubernetes impersonation or SAR | Critical for multi-tenant security | P1 |
+| Kubernetes Events endpoint on detail views | High — needed to debug Pending machines | P1 |
+| Status conditions on detail pages | High — debugging aid | P1 |
+| Resource relationships panel (Machine → NIC → IP) | High — navigable graph | P2 |
+| Column sort on list views | Medium | P2 |
+| VolumeSnapshot create from Volume | Medium | P2 |
+| Raw YAML view on all detail pages | Medium | P2 |
+| Breadcrumbs on detail views | Low | P3 |
+| Notification / alert panel | Low | P3 |
+| MachinePool capacity detail (per machine type) | Low | P3 |
 | Recents / Favorites | Low | P3 |
-| Notification panel | Low | P3 |
-| MachinePool capacity view | Low | P3 |
-| VolumeSnapshot create/restore | Low | P3 |
-| NATGateway, NetworkPolicy views | Low | P3 |
-| ResourceQuota view | Low | P3 |
-| Bucket / BucketClass / BucketPool | Low (backend not wired) | P3+ |
+| Server-side pagination (list with label selectors) | Medium — needed at 500+ resources | P2 |
 
 ---
 
-## 5. Security and Tenancy Model
+## 6. Security and Tenancy Model
 
-### 5.1 Backend security constraints (current)
-- The backend uses the kubeconfig provided at server startup — no per-request auth.
+### 6.1 Backend security constraints (current)
+- Backend uses the kubeconfig provided at startup — no per-request auth.
 - All API calls use the server's service account identity — no user impersonation.
-- CORS allows only `localhost:5173` and `localhost:8080` in production mode.
-- Demo mode allows `*` origins (acceptable for CI/preview only).
+- Demo mode (`--demo`) explicitly short-circuits all Kubernetes calls.
 
-### 5.2 Production requirements (Phase 2+)
-- **Authentication**: Bearer token forwarding from frontend to backend, or OIDC integration.
-- **Authorization**: Backend must not expose resources the caller cannot access in Kubernetes — use SubjectAccessReview or run calls with the user's token.
-- **Namespace scoping**: All list/get calls must be scoped to the namespace the user selected; the namespace switcher must validate namespace access before switching.
-- **Audit log**: Write a structured access log to stdout in JSON (already partially done via chi `middleware.Logger`).
-
-### 5.3 Demo mode boundaries
-- `--demo` flag uses hardcoded fixture data. It **must not** be used in production.
+### 6.2 Demo mode boundaries
+- `--demo` flag uses hardcoded fixture data. **Must not be used in production.**
 - No kubeconfig, no Kubernetes API calls, no real secrets.
 - The smoke test suite (`make smoke-test`) always uses demo mode.
+- Demo server banner displayed prominently in future iteration.
+
+### 6.3 Production deployment requirements (not yet implemented)
+1. **Authentication**: OIDC/Bearer token forwarding from frontend `Authorization: Bearer <token>` to backend, which then passes it to the Kubernetes API.
+2. **Authorization**: Backend runs all Kubernetes calls with the user's token — never the service account token. This prevents cross-tenant data leakage.
+3. **Namespace scoping**: Validate namespace access with `SubjectAccessReview` before switching.
 
 ---
 
-## 6. Hyperscaler Benchmark: IronCore vs. AWS EC2 Console
-
-Based on reference screenshots (`../aws-example-screenshots/`):
-
-| Feature | AWS EC2 Console | IronCore Current | Gap |
-|---------|----------------|-----------------|-----|
-| Resource list with inline search | ✅ | ✅ (basic) | Search is per-view, not global |
-| Column sort + filter | ✅ | ❌ | Missing on all views |
-| Pagination (server-side) | ✅ | ❌ | Lists load all items |
-| Bulk select + actions | ✅ | ❌ | No bulk selection |
-| Tag / label filtering | ✅ | ❌ | No label-based filter |
-| Resource relationships (Machine → NIC → IP) | ✅ | Partial | Detail views show some links |
-| Event history on detail | ✅ | ❌ | Not implemented |
-| Instance connect (console) | ✅ | ✅ (simulated) | Real SSH passthrough pending infra |
-| Monitoring / metrics | ✅ (CloudWatch) | ❌ | Out of scope (no metrics API) |
-
----
-
-## 7. Phased Roadmap
-
-### Phase 0 — Production baseline (✅ Complete)
-- Demo mode server (`--demo`) with fixture data
-- Fixed `mountFrontend` SPA fallback (fs.StatFS panic)
-- 6 Playwright smoke tests, all passing
-- `make smoke-test` CI target
-
-### Phase 1 — Blueprint (✅ This document)
-- IronCore CRD audit
-- Capability matrix
-- Navigation architecture
-- Persona mapping
-- Gap analysis
-
-### Phase 2 — Console shell foundation
-Acceptance criteria:
-- [ ] Sidebar groups (Compute, Storage, Networking, IPAM, Operations, Administration)
-- [ ] Sidebar collapse/expand per group, persisted to localStorage
-- [ ] Global search bar (keyboard shortcut `/` or `Ctrl+K`), scoped to visible resources
-- [ ] Pagination component (page size 20/50/100) on Machines, Volumes, Networks list views
-- [ ] Column sort (by name, state, created) on list views
-- [ ] Filter chips on list views (by state, by namespace if cross-ns)
-- [ ] Breadcrumbs on all detail views
-- [ ] Empty state component (no resources, no search results, no access)
-- [ ] Error state component (API error, with retry button)
-- [ ] Bulk select on Machine list with bulk delete + bulk power-toggle
-- [ ] WCAG 2.2 AA: all new interactive elements keyboard-accessible and screen-reader labeled
-
-### Phase 3 — Real vertical slices
-Acceptance criteria:
-- [ ] Compute: MachineClass list view (read-only), MachinePool list view (read-only, shows available capacity)
-- [ ] Storage: VolumeClass list view; Volume list shows VolumePool column; VolumeSnapshot list (read-only)
-- [ ] Networking: NetworkInterface list/detail; NATGateway list/detail
-- [ ] IPAM: PrefixAllocation sub-resource shown inline on Prefix detail
-- [ ] Administration: ResourceQuota view per namespace
-- [ ] Backend API: wired endpoints for MachinePool, VolumePool, VolumeSnapshot, NATGateway, NetworkInterface (standalone), PrefixAllocation, ResourceQuota
-
----
-
-## 8. Real vs. Demo Mode Feature Boundaries
-
-Any feature that relies on live Kubernetes data is "Real Only". The smoke test suite always runs against demo mode. A feature that works only in real mode must be hidden in demo mode UI, not shown as broken.
+## 7. Real vs. Demo Mode Feature Boundaries
 
 | Feature | Demo Mode | Real Mode |
 |---------|-----------|-----------|
-| Fixture data (5 machines, 5 vols, etc.) | ✅ | ❌ |
+| All resource lists | ✅ Fixture data | ✅ From real Kubernetes API |
 | Namespace switcher values | 4 hardcoded | From k8s CoreV1().Namespaces() |
-| Machine console (WebSocket) | Simulated shell | SSH passthrough (if NIC IP reachable) |
-| Volume snapshots | Not shown | Shown when API wired |
-| Events / audit log | Not shown | From k8s Events API |
-| ResourceQuota | Not shown | From core.ironcore.dev API |
+| Machine console (WebSocket) | Simulated shell (`$PS1` prompt) | SSH passthrough via NIC IP |
+| Events / audit log | Not shown | From k8s Events API (P1 gap) |
+| Status conditions | Not shown | From resource .Status.Conditions |
+| Buckets (Phase 4) | Demo fixtures | From StorageV1alpha1().Buckets() |
+| NetworkPolicies (Phase 4) | Demo fixtures | From NetworkingV1alpha1().NetworkPolicies() |
 
 ---
 
-_Blueprint authored by Claude Code (Phase 1 automation). Update this file as capabilities land._
+## 8. Phased Roadmap
+
+### Phase 0 — Production baseline ✅
+- Demo mode, SPA fallback fix, smoke tests, `make smoke-test`
+
+### Phase 1 — Blueprint ✅
+- CRD audit, capability matrix, navigation architecture, persona mapping, gap analysis
+
+### Phase 2 — Console shell foundation ✅
+- Grouped collapsible nav, global search (Ctrl+K), pagination, filter chips, bulk actions, EmptyState/ErrorState components
+
+### Phase 3 — Real vertical slices ✅
+- MachinePool, VolumePool, VolumeSnapshot, NATGateway, PrefixAllocation, ResourceQuota
+- All six backed by real IronCore client-go handlers
+- Demo fixtures for all six
+
+### Phase 4 — Responsive + extended resources (in progress)
+- ✅ Responsive layout: mobile drawer, compact top bar, no horizontal overflow
+- ✅ Expanded smoke tests: 20 tests (vs 6 in Phase 3), responsive at 390/768/1440
+- ✅ Phase 4 resources: NetworkInterface list, NetworkPolicy list, Bucket+BucketClass+BucketPool
+- 🔄 Events endpoint: real Kubernetes Events per resource (next milestone)
+- 🔄 Status conditions: display conditions from resource status on detail pages
+
+### Phase 5 — Production hardening (planned)
+- OIDC authentication, per-request bearer token forwarding
+- SubjectAccessReview namespace validation
+- Status conditions on all detail views
+- Kubernetes Events panel on all detail views
+- Server-side pagination with label selectors
+- Raw YAML view via `kubectl.io/v1` or direct API
+
+---
+
+_Blueprint authored by Claude Code (Phase 1) and updated through Phase 4 automation. Update as capabilities land._

@@ -153,6 +153,15 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dyna
 	})
 	r.Get("/api/v1/namespaces/{ns}/resourcequotas", api.NewResourceQuotaHandler(cs).List)
 
+	// Phase 4: NetworkPolicies, Buckets, BucketClasses, BucketPools
+	np4 := api.NewNetworkPolicyHandler(cs)
+	r.Get("/api/v1/namespaces/{ns}/networkpolicies", np4.List)
+
+	bh4 := api.NewBucketHandler(cs)
+	r.Get("/api/v1/namespaces/{ns}/buckets", bh4.List)
+	r.Get("/api/v1/bucketclasses", api.NewBucketClassHandler(cs).List)
+	r.Get("/api/v1/bucketpools", api.NewBucketPoolHandler(cs).List)
+
 	// Servers (metal-operator)
 	sh := api.NewServerHandler(s.dyn)
 	r.Get("/api/v1/servers", sh.List)

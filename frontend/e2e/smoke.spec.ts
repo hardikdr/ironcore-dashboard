@@ -79,6 +79,36 @@ test.describe('Phase 3 views', () => {
 })
 
 /**
+ * Phase 4 views: NetworkPolicy, Bucket, BucketClass, BucketPool, NetworkInterface.
+ */
+test.describe('Phase 4 views', () => {
+  test('network interfaces view renders', async ({ page }) => {
+    await page.goto('/networkinterfaces', { waitUntil: 'networkidle' })
+    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 8000 })
+  })
+
+  test('network policies view renders', async ({ page }) => {
+    await page.goto('/networkpolicies', { waitUntil: 'networkidle' })
+    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 8000 })
+  })
+
+  test('buckets view renders', async ({ page }) => {
+    await page.goto('/buckets', { waitUntil: 'networkidle' })
+    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 8000 })
+  })
+
+  test('bucket classes view renders', async ({ page }) => {
+    await page.goto('/bucketclasses', { waitUntil: 'networkidle' })
+    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 8000 })
+  })
+
+  test('bucket pools view renders', async ({ page }) => {
+    await page.goto('/bucketpools', { waitUntil: 'networkidle' })
+    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 8000 })
+  })
+})
+
+/**
  * Responsive tests: verify layout at key breakpoints, capture screenshots.
  */
 test.describe('Responsive layout', () => {

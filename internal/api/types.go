@@ -246,6 +246,41 @@ type ResourceQuotaResponse struct {
 	CreatedAt string            `json:"createdAt"`
 }
 
+// Phase 4 response types
+
+type NetworkPolicyResponse struct {
+	Name         string   `json:"name"`
+	Namespace    string   `json:"namespace"`
+	NetworkRef   string   `json:"networkRef"`
+	PolicyTypes  []string `json:"policyTypes"`
+	IngressRules int      `json:"ingressRules"`
+	EgressRules  int      `json:"egressRules"`
+	CreatedAt    string   `json:"createdAt"`
+}
+
+type BucketResponse struct {
+	Name           string `json:"name"`
+	Namespace      string `json:"namespace"`
+	BucketClassRef string `json:"bucketClassRef"`
+	BucketPoolRef  string `json:"bucketPoolRef"`
+	State          string `json:"state"`
+	Endpoint       string `json:"endpoint"`
+	CreatedAt      string `json:"createdAt"`
+}
+
+type BucketClassResponse struct {
+	Name         string            `json:"name"`
+	Capabilities map[string]string `json:"capabilities"`
+	CreatedAt    string            `json:"createdAt"`
+}
+
+type BucketPoolResponse struct {
+	Name                   string   `json:"name"`
+	State                  string   `json:"state"`
+	AvailableBucketClasses []string `json:"availableBucketClasses"`
+	CreatedAt              string   `json:"createdAt"`
+}
+
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

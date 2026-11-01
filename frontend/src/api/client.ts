@@ -97,7 +97,21 @@ export const api = {
   },
   resourceQuotas: {
     list: (ns: string) => request<ResourceQuota[]>(`/namespaces/${ns}/resourcequotas`)
-  }
+  },
+  // Phase 4 endpoints
+  networkPolicies: {
+    list: (ns: string) => request<NetworkPolicy[]>(`/namespaces/${ns}/networkpolicies`),
+  },
+  buckets: {
+    list:   (ns: string) => request<Bucket[]>(`/namespaces/${ns}/buckets`),
+    delete: (ns: string, name: string) => request<void>(`/namespaces/${ns}/buckets/${name}`, { method: 'DELETE' }),
+  },
+  bucketClasses: {
+    list: () => request<BucketClass[]>('/bucketclasses'),
+  },
+  bucketPools: {
+    list: () => request<BucketPool[]>('/bucketpools'),
+  },
 }
 
 // ── Type definitions ──────────────────────────────────────────────────────
@@ -208,4 +222,24 @@ export interface PrefixAllocation {
 export interface ResourceQuota {
   name: string; namespace: string
   hard: Record<string, string>; used: Record<string, string>; createdAt: string
+}
+
+// Phase 4 types
+
+export interface NetworkPolicy {
+  name: string; namespace: string; networkRef: string
+  policyTypes: string[]; ingressRules: number; egressRules: number; createdAt: string
+}
+
+export interface Bucket {
+  name: string; namespace: string; bucketClassRef: string
+  bucketPoolRef: string; state: string; endpoint: string; createdAt: string
+}
+
+export interface BucketClass {
+  name: string; capabilities: Record<string, string>; createdAt: string
+}
+
+export interface BucketPool {
+  name: string; state: string; availableBucketClasses: string[]; createdAt: string
 }

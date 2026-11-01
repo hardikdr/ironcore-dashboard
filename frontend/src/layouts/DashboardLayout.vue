@@ -147,10 +147,18 @@
         </NavGroup>
 
         <NavGroup label="Networking" :rail="rail && !mobile" storage-key="networking" :default-open="true">
-          <NavItem to="/networks"      icon="mdi-lan"                label="Networks"        :rail="rail && !mobile" @click="onNavClick" />
-          <NavItem to="/virtualips"    icon="mdi-earth"              label="Virtual IPs"     :rail="rail && !mobile" @click="onNavClick" />
-          <NavItem to="/loadbalancers" icon="mdi-scale-balance"      label="Load Balancers"  :rail="rail && !mobile" @click="onNavClick" />
-          <NavItem to="/natgateways"   icon="mdi-transit-transfer"   label="NAT Gateways"    :rail="rail && !mobile" @click="onNavClick" />
+          <NavItem to="/networks"          icon="mdi-lan"                label="Networks"          :rail="rail && !mobile" @click="onNavClick" />
+          <NavItem to="/virtualips"        icon="mdi-earth"              label="Virtual IPs"       :rail="rail && !mobile" @click="onNavClick" />
+          <NavItem to="/loadbalancers"     icon="mdi-scale-balance"      label="Load Balancers"    :rail="rail && !mobile" @click="onNavClick" />
+          <NavItem to="/natgateways"       icon="mdi-transit-transfer"   label="NAT Gateways"      :rail="rail && !mobile" @click="onNavClick" />
+          <NavItem to="/networkinterfaces" icon="mdi-ethernet"           label="Interfaces"        :rail="rail && !mobile" @click="onNavClick" />
+          <NavItem to="/networkpolicies"   icon="mdi-shield-lock-outline" label="Network Policies" :rail="rail && !mobile" @click="onNavClick" />
+        </NavGroup>
+
+        <NavGroup label="Object Storage" :rail="rail && !mobile" storage-key="objstorage" :default-open="false">
+          <NavItem to="/buckets"       icon="mdi-bucket-outline"     label="Buckets"         :rail="rail && !mobile" @click="onNavClick" />
+          <NavItem to="/bucketclasses" icon="mdi-bucket"             label="Bucket Classes"  :rail="rail && !mobile" @click="onNavClick" />
+          <NavItem to="/bucketpools"   icon="mdi-bucket-plus"        label="Bucket Pools"    :rail="rail && !mobile" @click="onNavClick" />
         </NavGroup>
 
         <NavGroup label="IPAM" :rail="rail && !mobile" storage-key="ipam" :default-open="true">

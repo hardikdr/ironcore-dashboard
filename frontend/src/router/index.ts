@@ -36,6 +36,12 @@ const router = createRouter({
         { path: 'volumesnapshots',     component: () => import('@/views/VolumeSnapshotsView.vue') },
         { path: 'natgateways',         component: () => import('@/views/NATGatewaysView.vue') },
         { path: 'resourcequotas',      component: () => import('@/views/ResourceQuotaView.vue') },
+        // Phase 4 — new resource views
+        { path: 'networkinterfaces',   component: () => import('@/views/NetworkInterfaceListView.vue') },
+        { path: 'networkpolicies',     component: () => import('@/views/NetworkPoliciesView.vue') },
+        { path: 'buckets',             component: () => import('@/views/BucketsView.vue') },
+        { path: 'bucketclasses',       component: () => import('@/views/BucketClassesView.vue') },
+        { path: 'bucketpools',         component: () => import('@/views/BucketPoolsView.vue') },
         { path: 'settings',            component: () => import('@/views/SettingsView.vue') },
         { path: ':pathMatch(.*)*',     component: () => import('@/views/NotFoundView.vue') },
       ]
