@@ -91,18 +91,21 @@
         <NavItem to="/overview" icon="mdi-view-dashboard-outline" label="Overview" :rail="rail" />
 
         <NavGroup label="Compute" :rail="rail" storage-key="compute" :default-open="true">
-          <NavItem to="/machines"   icon="mdi-server"              label="Machines"        :rail="rail" :badge="machineCount" />
-          <NavItem to="/topology"   icon="mdi-sitemap-outline"     label="Topology"        :rail="rail" />
+          <NavItem to="/machines"     icon="mdi-server"              label="Machines"        :rail="rail" :badge="machineCount" />
+          <NavItem to="/machinepools" icon="mdi-server-network"      label="Machine Pools"   :rail="rail" />
+          <NavItem to="/topology"     icon="mdi-sitemap-outline"     label="Topology"        :rail="rail" />
         </NavGroup>
 
         <NavGroup label="Storage" :rail="rail" storage-key="storage" :default-open="true">
-          <NavItem to="/volumes"    icon="mdi-database-outline"    label="Volumes"         :rail="rail" />
+          <NavItem to="/volumes"          icon="mdi-database-outline" label="Volumes"          :rail="rail" />
+          <NavItem to="/volumesnapshots"  icon="mdi-camera"           label="Snapshots"        :rail="rail" />
         </NavGroup>
 
         <NavGroup label="Networking" :rail="rail" storage-key="networking" :default-open="true">
           <NavItem to="/networks"      icon="mdi-lan"              label="Networks"        :rail="rail" />
           <NavItem to="/virtualips"    icon="mdi-earth"            label="Virtual IPs"     :rail="rail" />
           <NavItem to="/loadbalancers" icon="mdi-scale-balance"    label="Load Balancers"  :rail="rail" />
+          <NavItem to="/natgateways"   icon="mdi-transit-transfer" label="NAT Gateways"    :rail="rail" />
         </NavGroup>
 
         <NavGroup label="IPAM" :rail="rail" storage-key="ipam" :default-open="true">
@@ -110,7 +113,8 @@
         </NavGroup>
 
         <NavGroup label="Operations" :rail="rail" storage-key="operations" :default-open="true">
-          <NavItem to="/servers"    icon="mdi-server-security"     label="Servers"         :rail="rail" />
+          <NavItem to="/servers"        icon="mdi-server-security"    label="Servers"         :rail="rail" />
+          <NavItem to="/resourcequotas" icon="mdi-gauge"              label="Resource Quotas" :rail="rail" />
         </NavGroup>
       </v-list>
 

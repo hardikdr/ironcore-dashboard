@@ -35,6 +35,14 @@ var demoFixtures = map[string]any{
 		{Name: "ssd-fast", Storage: "500Gi"},
 		{Name: "hdd-archive", Storage: "2Ti"},
 	},
+	"machinepools": []MachinePoolResponse{
+		{Name: "pool-eu-central-1a", State: "Ready", AvailableMachineClasses: []string{"x1-small", "x1-medium", "x1-large"}, CreatedAt: demoNow2d},
+		{Name: "pool-eu-central-1b", State: "Ready", AvailableMachineClasses: []string{"x1-medium", "x1-xlarge", "gpu-v100-1"}, CreatedAt: demoNow2d},
+	},
+	"volumepools": []VolumePoolResponse{
+		{Name: "vpool-ssd-zone-a", State: "Available", AvailableVolumeClasses: []string{"ssd-standard", "ssd-fast"}, CreatedAt: demoNow2d},
+		{Name: "vpool-hdd-zone-a", State: "Available", AvailableVolumeClasses: []string{"hdd-archive"}, CreatedAt: demoNow2d},
+	},
 
 	"machines": []MachineResponse{
 		{Name: "web-frontend-01", Namespace: "default", State: "Running", Power: "On", MachineClass: "x1-medium", Image: "gardenlinux@sha256:abc123", IPs: []string{"10.0.0.10"}, Volumes: []string{"data-01"}, CreatedAt: demoNow2d},
@@ -51,23 +59,28 @@ var demoFixtures = map[string]any{
 		{Name: "model-store", Namespace: "default", State: "Available", SizeBytes: 2 * 1024 * 1024 * 1024 * 1024, VolumeClass: "hdd-archive", CreatedAt: demoNow2d},
 		{Name: "backup-logs", Namespace: "default", State: "Pending", SizeBytes: 200 * 1024 * 1024 * 1024, VolumeClass: "hdd-archive", CreatedAt: demoNow1h},
 	},
+	"volumesnapshots": []VolumeSnapshotResponse{
+		{Name: "data-01-snap-2026-10-31", Namespace: "default", VolumeRef: "data-01", State: "Ready", CreatedAt: demoNow1d},
+		{Name: "api-data-snap-2026-10-30", Namespace: "default", VolumeRef: "api-data", State: "Ready", CreatedAt: demoNow2d},
+	},
 
 	"networks": []NetworkResponse{
 		{Name: "prod-network", Namespace: "default", CreatedAt: demoNow2d},
 		{Name: "dev-network", Namespace: "default", CreatedAt: demoNow1d},
 	},
-
 	"networkinterfaces": []NetworkInterfaceResponse{
 		{Name: "web-frontend-01-nic0", Namespace: "default", State: "Available", IPs: []string{"10.0.0.10"}, Network: "prod-network", Machine: "web-frontend-01", CreatedAt: demoNow2d},
 		{Name: "web-frontend-02-nic0", Namespace: "default", State: "Available", IPs: []string{"10.0.0.11"}, Network: "prod-network", Machine: "web-frontend-02", CreatedAt: demoNow2d},
 		{Name: "api-server-01-nic0", Namespace: "default", State: "Available", IPs: []string{"10.0.0.20"}, Network: "prod-network", Machine: "api-server-01", CreatedAt: demoNow1d},
+	},
+	"natgateways": []NATGatewayResponse{
+		{Name: "prod-nat-gw", Namespace: "default", NetworkRef: "prod-network", IPs: []string{"203.0.113.5"}, CreatedAt: demoNow2d},
 	},
 
 	"virtualips": []VirtualIPResponse{
 		{Name: "ingress-vip-01", Namespace: "default", IP: "203.0.113.10", Type: "Public", IPFamily: "IPv4", CreatedAt: demoNow2d},
 		{Name: "api-vip-01", Namespace: "default", IP: "203.0.113.11", Type: "Public", IPFamily: "IPv4", CreatedAt: demoNow1d},
 	},
-
 	"loadbalancers": []LoadBalancerResponse{
 		{Name: "web-lb", Namespace: "default", Type: "Public", IPs: []string{"203.0.113.20"}, CreatedAt: demoNow2d},
 		{Name: "api-lb", Namespace: "default", Type: "Internal", IPs: []string{"10.0.1.100"}, CreatedAt: demoNow1d},
@@ -77,6 +90,18 @@ var demoFixtures = map[string]any{
 		{Name: "prod-cidr", Namespace: "default", Prefix: "10.0.0.0/16", Phase: "Allocated", CreatedAt: demoNow2d},
 		{Name: "dev-cidr", Namespace: "default", Prefix: "10.1.0.0/16", Phase: "Allocated", CreatedAt: demoNow1d},
 		{Name: "staging-cidr", Namespace: "default", Prefix: "10.2.0.0/16", Phase: "Pending", CreatedAt: demoNow1h},
+	},
+	"prefixallocations": []PrefixAllocationResponse{
+		{Name: "web-frontend-01-alloc", Namespace: "default", PrefixRef: "prod-cidr", Prefix: "10.0.0.0/28", Phase: "Allocated", CreatedAt: demoNow2d},
+		{Name: "api-server-01-alloc", Namespace: "default", PrefixRef: "prod-cidr", Prefix: "10.0.0.16/28", Phase: "Allocated", CreatedAt: demoNow1d},
+	},
+	"resourcequotas": []ResourceQuotaResponse{
+		{
+			Name: "default-quota", Namespace: "default",
+			Hard: map[string]string{"compute.ironcore.dev/machines": "20", "storage.ironcore.dev/requests.storage": "5Ti"},
+			Used: map[string]string{"compute.ironcore.dev/machines": "5", "storage.ironcore.dev/requests.storage": "1Ti"},
+			CreatedAt: demoNow2d,
+		},
 	},
 }
 
@@ -109,6 +134,15 @@ func (d *DemoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// volumeclasses
 	if path == "/volumeclasses" {
 		writeJSON(w, http.StatusOK, demoFixtures["volumeclasses"])
+		return
+	}
+	// phase 3 cluster-scoped
+	if path == "/machinepools" {
+		writeJSON(w, http.StatusOK, demoFixtures["machinepools"])
+		return
+	}
+	if path == "/volumepools" {
+		writeJSON(w, http.StatusOK, demoFixtures["volumepools"])
 		return
 	}
 
@@ -207,6 +241,22 @@ func (d *DemoHandler) handleResource(w http.ResponseWriter, r *http.Request, res
 		}
 	case "networkinterfaces":
 		writeJSON(w, http.StatusOK, demoFixtures["networkinterfaces"])
+	case "natgateways":
+		if name == "" {
+			writeJSON(w, http.StatusOK, demoFixtures["natgateways"])
+		} else {
+			writeError(w, http.StatusNotFound, "natgateway not found: "+name)
+		}
+	case "volumesnapshots":
+		if name == "" {
+			writeJSON(w, http.StatusOK, demoFixtures["volumesnapshots"])
+		} else {
+			writeError(w, http.StatusNotFound, "volumesnapshot not found: "+name)
+		}
+	case "prefixallocations":
+		writeJSON(w, http.StatusOK, demoFixtures["prefixallocations"])
+	case "resourcequotas":
+		writeJSON(w, http.StatusOK, demoFixtures["resourcequotas"])
 	case "virtualips":
 		list := demoFixtures["virtualips"].([]VirtualIPResponse)
 		if name == "" {

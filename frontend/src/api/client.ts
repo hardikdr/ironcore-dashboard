@@ -74,10 +74,29 @@ export const api = {
     create: (ns: string, body: CreatePrefixRequest) =>
       request<Prefix>(`/namespaces/${ns}/prefixes`, { method: 'POST', body: JSON.stringify(body) }),
     delete: (ns: string, name: string) =>
-      request<void>(`/namespaces/${ns}/prefixes/${name}`, { method: 'DELETE' })
+      request<void>(`/namespaces/${ns}/prefixes/${name}`, { method: 'DELETE' }),
+    listAllocations: (ns: string) => request<PrefixAllocation[]>(`/namespaces/${ns}/prefixallocations`)
   },
   servers: {
     list: () => request<Server[]>('/servers')
+  },
+  // Phase 3 endpoints
+  machinePools: {
+    list: () => request<MachinePool[]>('/machinepools')
+  },
+  volumePools: {
+    list: () => request<VolumePool[]>('/volumepools')
+  },
+  volumeSnapshots: {
+    list:   (ns: string) => request<VolumeSnapshot[]>(`/namespaces/${ns}/volumesnapshots`),
+    delete: (ns: string, name: string) => request<void>(`/namespaces/${ns}/volumesnapshots/${name}`, { method: 'DELETE' })
+  },
+  natGateways: {
+    list:   (ns: string) => request<NATGateway[]>(`/namespaces/${ns}/natgateways`),
+    delete: (ns: string, name: string) => request<void>(`/namespaces/${ns}/natgateways/${name}`, { method: 'DELETE' })
+  },
+  resourceQuotas: {
+    list: (ns: string) => request<ResourceQuota[]>(`/namespaces/${ns}/resourcequotas`)
   }
 }
 
@@ -162,4 +181,31 @@ export interface Server {
 export function wsConsoleUrl(ns: string, name: string): string {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${proto}//${window.location.host}/api/v1/ws/machines/${ns}/${name}/console`
+}
+
+// Phase 3 types
+
+export interface MachinePool {
+  name: string; state: string; availableMachineClasses: string[]; createdAt: string
+}
+
+export interface VolumePool {
+  name: string; state: string; availableVolumeClasses: string[]; createdAt: string
+}
+
+export interface VolumeSnapshot {
+  name: string; namespace: string; volumeRef: string; state: string; createdAt: string
+}
+
+export interface NATGateway {
+  name: string; namespace: string; networkRef: string; ips: string[]; createdAt: string
+}
+
+export interface PrefixAllocation {
+  name: string; namespace: string; prefixRef: string; prefix: string; phase: string; createdAt: string
+}
+
+export interface ResourceQuota {
+  name: string; namespace: string
+  hard: Record<string, string>; used: Record<string, string>; createdAt: string
 }

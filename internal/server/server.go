@@ -136,6 +136,22 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dyna
 		r.Get("/{name}", iph.GetPrefix)
 		r.Delete("/{name}", iph.DeletePrefix)
 	})
+	r.Get("/api/v1/namespaces/{ns}/prefixallocations", api.NewPrefixAllocationHandler(cs).List)
+
+	// Phase 3: MachinePool, VolumePool (cluster-scoped), VolumeSnapshots, NATGateways, ResourceQuota
+	r.Get("/api/v1/machinepools", api.NewMachinePoolHandler(cs).List)
+	r.Get("/api/v1/volumepools", api.NewVolumePoolHandler(cs).List)
+	vsh := api.NewVolumeSnapshotHandler(cs)
+	r.Route("/api/v1/namespaces/{ns}/volumesnapshots", func(r chi.Router) {
+		r.Get("/", vsh.List)
+		r.Delete("/{name}", vsh.Delete)
+	})
+	ngh := api.NewNATGatewayHandler(cs)
+	r.Route("/api/v1/namespaces/{ns}/natgateways", func(r chi.Router) {
+		r.Get("/", ngh.List)
+		r.Delete("/{name}", ngh.Delete)
+	})
+	r.Get("/api/v1/namespaces/{ns}/resourcequotas", api.NewResourceQuotaHandler(cs).List)
 
 	// Servers (metal-operator)
 	sh := api.NewServerHandler(s.dyn)

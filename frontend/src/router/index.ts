@@ -31,6 +31,11 @@ const router = createRouter({
         { path: 'prefixes',            component: () => import('@/views/IPPrefixesView.vue') },
         { path: 'prefixes/new',        component: () => import('@/views/IPPrefixCreateView.vue') },
         { path: 'prefixes/:name',      component: () => import('@/views/IPPrefixDetailView.vue') },
+        // Phase 3 — new resource views
+        { path: 'machinepools',        component: () => import('@/views/MachinePoolsView.vue') },
+        { path: 'volumesnapshots',     component: () => import('@/views/VolumeSnapshotsView.vue') },
+        { path: 'natgateways',         component: () => import('@/views/NATGatewaysView.vue') },
+        { path: 'resourcequotas',      component: () => import('@/views/ResourceQuotaView.vue') },
         { path: 'settings',            component: () => import('@/views/SettingsView.vue') },
         { path: ':pathMatch(.*)*',     component: () => import('@/views/NotFoundView.vue') },
       ]

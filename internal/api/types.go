@@ -197,6 +197,55 @@ type ServerResponse struct {
 	ClaimStatus string `json:"claimStatus"`
 }
 
+// Phase 3 response types
+
+type MachinePoolResponse struct {
+	Name                   string   `json:"name"`
+	State                  string   `json:"state"`
+	AvailableMachineClasses []string `json:"availableMachineClasses"`
+	CreatedAt              string   `json:"createdAt"`
+}
+
+type VolumePoolResponse struct {
+	Name                 string   `json:"name"`
+	State                string   `json:"state"`
+	AvailableVolumeClasses []string `json:"availableVolumeClasses"`
+	CreatedAt            string   `json:"createdAt"`
+}
+
+type VolumeSnapshotResponse struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	VolumeRef string `json:"volumeRef"`
+	State     string `json:"state"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type NATGatewayResponse struct {
+	Name      string   `json:"name"`
+	Namespace string   `json:"namespace"`
+	NetworkRef string  `json:"networkRef"`
+	IPs       []string `json:"ips"`
+	CreatedAt string   `json:"createdAt"`
+}
+
+type PrefixAllocationResponse struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	PrefixRef string `json:"prefixRef"`
+	Prefix    string `json:"prefix"`
+	Phase     string `json:"phase"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type ResourceQuotaResponse struct {
+	Name      string            `json:"name"`
+	Namespace string            `json:"namespace"`
+	Hard      map[string]string `json:"hard"`
+	Used      map[string]string `json:"used"`
+	CreatedAt string            `json:"createdAt"`
+}
+
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
