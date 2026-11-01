@@ -217,7 +217,7 @@ make demo
 
 # Smoke tests (requires demo to be stopped first)  
 make smoke-test
-# → runs 20 Playwright tests, captures screenshots to frontend/e2e/screenshots/
+# → runs 25 Playwright tests, captures screenshots to frontend/e2e/screenshots/
 
 # Real mode (requires KUBECONFIG)
 export KUBECONFIG=~/.kube/config
