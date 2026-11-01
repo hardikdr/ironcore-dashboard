@@ -16,7 +16,17 @@ import (
 func main() {
 	addr       := flag.String("addr", ":8080", "HTTP listen address")
 	kubeconfig := flag.String("kubeconfig", "", "path to kubeconfig (empty = in-cluster)")
+	demo       := flag.Bool("demo", false, "serve fixture data without a real cluster (for CI and preview)")
 	flag.Parse()
+
+	if *demo {
+		srv := server.NewDemo(rootpkg.Frontend())
+		log.Printf("IronCore Dashboard (DEMO MODE) listening on %s", *addr)
+		if err := srv.ListenAndServe(*addr); err != nil {
+			log.Fatalf("server error: %v", err)
+		}
+		return
+	}
 
 	// IronCore clientset
 	cs, err := ironclient.New(*kubeconfig)

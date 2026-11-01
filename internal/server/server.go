@@ -26,6 +26,26 @@ type Server struct {
 	dyn      dynamic.Interface
 }
 
+// NewDemo creates a server that serves fixture data without needing a real cluster.
+// Pass the same frontendFS to serve the built SPA alongside the API.
+func NewDemo(frontendFS fs.FS) *Server {
+	demo := &api.DemoHandler{}
+	s := &Server{}
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Content-Type"},
+	}))
+	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
+	r.Mount("/api/v1", demo)
+	mountFrontend(r, frontendFS)
+	s.router = r
+	return s
+}
+
 func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dynamic.Interface, frontendFS fs.FS) *Server {
 	s := &Server{ironcore: cs, k8s: k8sClient, dyn: dynClient}
 	r := chi.NewRouter()
@@ -125,20 +145,33 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dyna
 	r.Get("/api/v1/ws/machines/{ns}/{name}/console", s.handleMachineConsole)
 
 	// Serve built Vue SPA for all other routes
-	if frontendFS != nil {
-		fileServer := http.FileServer(http.FS(frontendFS))
-		r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-			// SPA fallback: serve index.html for unknown routes so vue-router handles them
-			_, statErr := frontendFS.(fs.StatFS).Stat(r.URL.Path[1:])
-			if statErr != nil {
-				r.URL.Path = "/"
-			}
-			fileServer.ServeHTTP(w, r)
-		})
-	}
+	mountFrontend(r, frontendFS)
 
 	s.router = r
 	return s
+}
+
+func mountFrontend(r *chi.Mux, frontendFS fs.FS) {
+	if frontendFS == nil {
+		return
+	}
+	fileServer := http.FileServer(http.FS(frontendFS))
+	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+		// SPA fallback: serve index.html for unknown routes so vue-router handles them.
+		// Use fs.Stat which works on all fs.FS implementations including sub-filesystems.
+		trimmed := r.URL.Path
+		if len(trimmed) > 0 && trimmed[0] == '/' {
+			trimmed = trimmed[1:]
+		}
+		if trimmed == "" {
+			trimmed = "."
+		}
+		_, statErr := fs.Stat(frontendFS, trimmed)
+		if statErr != nil {
+			r.URL.Path = "/"
+		}
+		fileServer.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) handleMachineConsole(w http.ResponseWriter, r *http.Request) {
