@@ -70,7 +70,7 @@
       </v-col>
     </v-row>
 
-    <!-- ── Recent Activity + Quick Actions ───────────────────────── -->
+    <!-- ── Recent Activity + Health Summary ───────────────────────── -->
     <v-row>
       <v-col cols="12" md="8">
         <v-card :style="cardStyle" class="pa-4">
@@ -112,7 +112,7 @@
               <v-chip :color="typeColor(item.type)" size="x-small" variant="tonal">{{ item.type }}</v-chip>
             </template>
             <template #item.status="{ item }">
-              <StatusBadge :state="item.status" />
+              <StatusBadge :state="item.status" size="small" />
             </template>
             <template #item.name="{ item }">
               <router-link :to="item.link" class="text-decoration-none font-weight-medium">{{ item.name }}</router-link>
@@ -120,58 +120,39 @@
             <template #item.created="{ item }">
               <span class="text-caption text-medium-emphasis">{{ relativeTime(item.created) }}</span>
             </template>
+            <template #item.lastSeen="{ item }">
+              <span class="text-caption text-medium-emphasis">{{ item.lastSeen ? relativeTime(item.lastSeen) : '—' }}</span>
+            </template>
           </v-data-table>
         </v-card>
       </v-col>
 
       <v-col cols="12" md="4">
-        <!-- Health Summary — actionable operator-relevant alerts -->
+        <!-- Health Summary -->
         <v-card :style="cardStyle" class="pa-4">
-          <div class="text-subtitle-2 font-weight-bold mb-3 d-flex align-center ga-2">
-            <v-icon size="16" :color="healthColor">mdi-shield-check-outline</v-icon>
-            Fleet Health
+          <div class="text-subtitle-2 font-weight-bold mb-4 d-flex align-center ga-2">
+            <v-icon size="16" :color="healthColor">mdi-heart-pulse</v-icon>
+            Health Summary
           </div>
-          <div v-if="healthAlerts.length === 0" class="d-flex align-center ga-2 text-caption" style="color:#34d399">
-            <v-icon size="16" color="success">mdi-check-circle-outline</v-icon>
-            All systems operational
+
+          <!-- All OK banner -->
+          <div v-if="healthItems.length === 0" class="d-flex align-center ga-2">
+            <v-icon color="success" size="20">mdi-check-circle-outline</v-icon>
+            <span class="text-body-2 text-success">All systems OK</span>
           </div>
+
+          <!-- Issues list -->
           <div v-else class="d-flex flex-column ga-2">
             <div
-              v-for="alert in healthAlerts"
-              :key="alert.label"
-              class="d-flex align-center justify-space-between"
+              v-for="item in healthItems"
+              :key="item.label"
+              class="d-flex align-center ga-2 text-body-2"
             >
-              <div class="d-flex align-center ga-2">
-                <v-icon size="14" :color="alert.color">{{ alert.icon }}</v-icon>
-                <span class="text-caption">{{ alert.label }}</span>
-              </div>
-              <router-link :to="alert.link" class="text-caption text-decoration-none" style="color:inherit; opacity:0.7;">
-                View →
+              <v-icon :color="item.color" size="18">{{ item.icon }}</v-icon>
+              <router-link :to="item.link" class="text-decoration-none" :class="`text-${item.color}`">
+                {{ item.count }} {{ item.label }}
               </router-link>
             </div>
-          </div>
-        </v-card>
-
-        <!-- Quick create -->
-        <v-card :style="cardStyle" class="pa-4 mt-4">
-          <div class="text-subtitle-2 font-weight-bold mb-3 d-flex align-center ga-2">
-            <v-icon size="16" color="primary">mdi-lightning-bolt</v-icon>
-            Quick Actions
-          </div>
-          <div class="d-flex flex-column ga-2">
-            <v-btn
-              v-for="action in quickActions"
-              :key="action.label"
-              :to="action.to"
-              :prepend-icon="action.icon"
-              :color="action.color"
-              variant="tonal"
-              class="justify-start"
-              size="small"
-              rounded="lg"
-            >
-              {{ action.label }}
-            </v-btn>
           </div>
         </v-card>
 
@@ -266,82 +247,71 @@ const volumeSegments = computed(() => {
   ].filter(s => s.value > 0)
 })
 
-// ── Recent resources table ─────────────────────────────────────────
-const recentHeaders = [
-  { title: 'Name',    key: 'name',    width: '40%' },
-  { title: 'Type',    key: 'type',    width: '20%' },
-  { title: 'Status',  key: 'status',  width: '25%' },
-  { title: 'Created', key: 'created', width: '15%' },
-]
-
-const recentResources = computed(() => {
-  const rows: { name: string; type: string; status: string; created: string; link: string }[] = []
-  machinesStore.items.forEach(m => rows.push({
-    name: m.name, type: 'Machine', status: m.state || m.power || '—', created: m.createdAt, link: `/machines/${m.name}`
-  }))
-  volumesStore.items.forEach(v => rows.push({
-    name: v.name, type: 'Volume', status: v.state || '—', created: v.createdAt, link: `/volumes/${v.name}`
-  }))
-  networksStore.items.forEach((n: { name: string; createdAt?: string }) => rows.push({
-    name: n.name, type: 'Network', status: 'Active', created: n.createdAt ?? '', link: `/networks/${n.name}`
-  }))
-  return rows.sort((a,b) => (b.created > a.created ? 1 : -1)).slice(0, 8)
-})
-
-// ── Attention items ────────────────────────────────────────────────
+// ── Health Summary ─────────────────────────────────────────────────
 const pendingMachines = computed(() =>
   machinesStore.items.filter(m => m.state?.toLowerCase() === 'pending').length
 )
 const errorVolumes = computed(() =>
-  volumesStore.items.filter(v => v.state?.toLowerCase() !== 'available' && v.state?.toLowerCase() !== 'bound').length
+  volumesStore.items.filter(v => v.state && !['available', 'bound'].includes(v.state.toLowerCase())).length
 )
+
+const healthItems = computed(() => {
+  const items: { label: string; count: number; icon: string; color: string; link: string }[] = []
+  if (pendingMachines.value > 0) {
+    items.push({
+      label: `Pending machine${pendingMachines.value > 1 ? 's' : ''}`,
+      count: pendingMachines.value,
+      icon: 'mdi-timer-sand',
+      color: 'warning',
+      link: '/machines',
+    })
+  }
+  if (errorVolumes.value > 0) {
+    items.push({
+      label: `volume${errorVolumes.value > 1 ? 's' : ''} with issues`,
+      count: errorVolumes.value,
+      icon: 'mdi-alert-circle-outline',
+      color: 'error',
+      link: '/volumes',
+    })
+  }
+  return items
+})
+
+const healthColor = computed(() => {
+  if (healthItems.value.some(h => h.color === 'error')) return 'error'
+  if (healthItems.value.some(h => h.color === 'warning')) return 'warning'
+  return 'success'
+})
+
+// ── Recent resources table ─────────────────────────────────────────
+const recentHeaders = [
+  { title: 'Name',      key: 'name',     width: '35%' },
+  { title: 'Type',      key: 'type',     width: '15%' },
+  { title: 'Status',    key: 'status',   width: '20%' },
+  { title: 'Created',   key: 'created',  width: '15%' },
+  { title: 'Last seen', key: 'lastSeen', width: '15%' },
+]
+
+const recentResources = computed(() => {
+  const rows: { name: string; type: string; status: string; created: string; lastSeen: string; link: string }[] = []
+  machinesStore.items.slice(0,4).forEach(m => rows.push({
+    name: m.name, type: 'Machine', status: m.state || m.power || '—', created: m.createdAt, lastSeen: m.createdAt, link: `/machines/${m.name}`
+  }))
+  volumesStore.items.slice(0,3).forEach(v => rows.push({
+    name: v.name, type: 'Volume', status: v.state || '—', created: v.createdAt, lastSeen: v.createdAt, link: `/volumes/${v.name}`
+  }))
+  networksStore.items.slice(0,2).forEach((n: { name: string; createdAt?: string }) => rows.push({
+    name: n.name, type: 'Network', status: 'Active', created: n.createdAt ?? '', lastSeen: n.createdAt ?? '', link: `/networks/${n.name}`
+  }))
+  return rows.sort((a,b) => (b.created > a.created ? 1 : -1)).slice(0, 8)
+})
 
 function typeColor(type: string) {
   const m: Record<string, string> = { Machine: 'primary', Volume: 'info', Network: 'accent' }
   return m[type] ?? 'secondary'
 }
 
-// ── Fleet health alerts ────────────────────────────────────────────
-const healthAlerts = computed(() => {
-  const alerts: { label: string; icon: string; color: string; link: string }[] = []
-  const pendingMachines = machinesStore.items.filter(m => m.state?.toLowerCase() === 'pending').length
-  const errorMachines   = machinesStore.items.filter(m => m.state?.toLowerCase() === 'error').length
-  const errorVolumes    = volumesStore.items.filter(v => v.state?.toLowerCase() === 'error').length
-  const pendingVolumes  = volumesStore.items.filter(v => v.state?.toLowerCase() === 'pending').length
-
-  if (errorMachines > 0) alerts.push({
-    label: `${errorMachines} machine${errorMachines > 1 ? 's' : ''} in error`,
-    icon: 'mdi-alert-circle', color: 'error', link: '/machines'
-  })
-  if (pendingMachines > 0) alerts.push({
-    label: `${pendingMachines} machine${pendingMachines > 1 ? 's' : ''} pending`,
-    icon: 'mdi-clock-outline', color: 'warning', link: '/machines'
-  })
-  if (errorVolumes > 0) alerts.push({
-    label: `${errorVolumes} volume${errorVolumes > 1 ? 's' : ''} in error`,
-    icon: 'mdi-database-alert', color: 'error', link: '/volumes'
-  })
-  if (pendingVolumes > 0) alerts.push({
-    label: `${pendingVolumes} volume${pendingVolumes > 1 ? 's' : ''} pending`,
-    icon: 'mdi-clock-outline', color: 'warning', link: '/volumes'
-  })
-  return alerts
-})
-
-const healthColor = computed(() => {
-  const hasError = healthAlerts.value.some(a => a.color === 'error')
-  const hasWarning = healthAlerts.value.some(a => a.color === 'warning')
-  return hasError ? 'error' : hasWarning ? 'warning' : 'success'
-})
-
-// ── Quick actions ──────────────────────────────────────────────────
-const quickActions = [
-  { label: 'Create Machine',    to: '/machines/new',      icon: 'mdi-plus', color: 'primary' },
-  { label: 'Create Volume',     to: '/volumes/new',       icon: 'mdi-plus', color: 'info' },
-  { label: 'Create Network',    to: '/networks/new',      icon: 'mdi-plus', color: 'accent' },
-  { label: 'View Topology',     to: '/topology',          icon: 'mdi-sitemap-outline', color: 'secondary' },
-  { label: 'Dedicated Hosts',   to: '/servers',           icon: 'mdi-server-security', color: 'warning' },
-]
 
 onMounted(async () => {
   await Promise.all([

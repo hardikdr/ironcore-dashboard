@@ -2,7 +2,10 @@
   <v-container fluid class="pa-6">
     <PageHeader title="Machines" subtitle="Virtual machine instances" icon="mdi-server">
       <template #actions>
-        <v-btn variant="outlined" prepend-icon="mdi-refresh" :loading="store.loading" @click="store.load()">Refresh</v-btn>
+        <span v-if="lastFetch" class="text-caption text-medium-emphasis align-self-center">
+          Updated {{ relativeTime(lastFetch) }}
+        </span>
+        <v-btn variant="outlined" prepend-icon="mdi-refresh" :loading="store.loading" @click="refresh">Refresh</v-btn>
         <v-btn color="primary" prepend-icon="mdi-plus" :to="{ path: '/machines/new' }">Create Machine</v-btn>
       </template>
     </PageHeader>
@@ -46,7 +49,7 @@
         />
 
         <!-- State filter chips -->
-        <div class="d-flex ga-2 flex-wrap">
+        <div class="d-flex ga-2 flex-wrap" role="group" aria-label="Filter by state">
           <v-chip
             v-for="state in stateFilters"
             :key="state.value"
@@ -54,6 +57,7 @@
             :variant="stateFilter === state.value ? 'tonal' : 'outlined'"
             size="small"
             clickable
+            :aria-pressed="stateFilter === state.value ? 'true' : 'false'"
             @click="stateFilter = stateFilter === state.value ? null : state.value"
           >
             {{ state.label }}
@@ -137,22 +141,31 @@
             </span>
           </template>
           <template #item.actions="{ item }">
-            <div class="d-flex ga-1">
-              <v-btn
-                size="x-small" variant="outlined"
-                :icon="item.power === 'On' ? 'mdi-power-off' : 'mdi-power'"
-                :color="item.power === 'On' ? 'warning' : 'success'"
-                :aria-label="item.power === 'On' ? `Power off ${item.name}` : `Power on ${item.name}`"
-                :title="item.power === 'On' ? 'Power off' : 'Power on'"
-                @click.stop="store.setPower(item.name, item.power === 'On' ? 'Off' : 'On')"
-              />
-              <v-btn
-                size="x-small" variant="outlined" icon="mdi-delete" color="error"
-                :aria-label="`Delete machine ${item.name}`"
-                title="Delete machine"
-                @click.stop="confirmDelete(item.name)"
-              />
-            </div>
+            <v-menu location="bottom end">
+              <template #activator="{ props: menuProps }">
+                <v-btn
+                  v-bind="menuProps"
+                  size="x-small"
+                  variant="text"
+                  icon="mdi-dots-vertical"
+                  :aria-label="`Actions for ${item.name}`"
+                  @click.stop
+                />
+              </template>
+              <v-list density="compact">
+                <v-list-item
+                  :prepend-icon="item.power === 'On' ? 'mdi-power-off' : 'mdi-power'"
+                  :title="item.power === 'On' ? 'Power off' : 'Power on'"
+                  @click="store.setPower(item.name, item.power === 'On' ? 'Off' : 'On')"
+                />
+                <v-list-item
+                  prepend-icon="mdi-delete"
+                  title="Delete"
+                  class="text-error"
+                  @click="confirmDelete(item.name)"
+                />
+              </v-list>
+            </v-menu>
           </template>
 
           <!-- Empty state for filtered results -->
@@ -229,6 +242,7 @@ const stateFilter = ref<string | null>(null)
 const page        = ref(1)
 const pageSize    = ref(20)
 const selected    = ref<string[]>([])
+const lastFetch   = ref<string | null>(null)
 
 const deleteDialog     = ref(false)
 const bulkDeleteDialog = ref(false)
@@ -286,6 +300,11 @@ const stats = computed(() => {
 // Reset to page 1 when filter changes
 watch([search, stateFilter], () => { page.value = 1 })
 
+async function refresh() {
+  await store.load()
+  lastFetch.value = new Date().toISOString()
+}
+
 function confirmDelete(name: string) { pendingDelete.value = name; deleteDialog.value = true }
 async function doDelete() {
   await store.deleteMachine(pendingDelete.value)
@@ -303,6 +322,6 @@ async function doBulkDelete() {
   bulkDeleteDialog.value = false
 }
 
-onMounted(() => store.load())
-watch(() => nsStore.active, () => store.load())
+onMounted(async () => { await store.load(); lastFetch.value = new Date().toISOString() })
+watch(() => nsStore.active, async () => { await store.load(); lastFetch.value = new Date().toISOString() })
 </script>

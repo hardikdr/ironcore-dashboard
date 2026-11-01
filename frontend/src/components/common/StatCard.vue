@@ -1,6 +1,6 @@
 <template>
   <v-card
-    :style="cardStyle"
+    :style="[cardStyle, borderStyle]"
     class="stat-card pa-4 position-relative overflow-hidden"
     height="110"
   >
@@ -24,7 +24,7 @@
         class="stat-icon d-flex align-center justify-center rounded-lg"
         :style="iconBgStyle"
       >
-        <v-icon :color="color" size="22">{{ icon }}</v-icon>
+        <v-icon :color="color" size="32">{{ icon }}</v-icon>
       </div>
     </div>
   </v-card>
@@ -46,6 +46,10 @@ const props = defineProps<{
 const { cardStyle } = useCardStyle()
 
 const valueColor = computed(() => `rgb(var(--v-theme-${props.color ?? 'primary'}))`)
+
+const borderStyle = computed(() => ({
+  borderBottom: `3px solid rgb(var(--v-theme-${props.color ?? 'primary'}))`,
+}))
 
 const glowStyle = computed(() => ({
   position: 'absolute' as const,

@@ -2,7 +2,10 @@
   <v-container fluid class="pa-6">
     <PageHeader title="Networking" subtitle="Networks and network interfaces" icon="mdi-lan">
       <template #actions>
-        <v-btn variant="outlined" prepend-icon="mdi-refresh" :loading="store.loading" @click="load()">Refresh</v-btn>
+        <span v-if="lastFetch" class="text-caption text-medium-emphasis align-self-center">
+          Updated {{ relativeTime(lastFetch) }}
+        </span>
+        <v-btn variant="outlined" prepend-icon="mdi-refresh" :loading="store.loading" @click="refresh">Refresh</v-btn>
         <v-btn color="primary" prepend-icon="mdi-plus" :to="{ path: '/networks/new' }">Create Network</v-btn>
       </template>
     </PageHeader>
@@ -77,12 +80,26 @@
             <span class="text-caption text-medium-emphasis">{{ relativeTime(item.createdAt) }}</span>
           </template>
           <template #item.actions="{ item }">
-            <v-btn
-              size="x-small" variant="outlined" icon="mdi-delete" color="error"
-              :aria-label="`Delete network ${item.name}`"
-              title="Delete network"
-              @click="confirmDelete(item.name)"
-            />
+            <v-menu location="bottom end">
+              <template #activator="{ props: menuProps }">
+                <v-btn
+                  v-bind="menuProps"
+                  size="x-small"
+                  variant="text"
+                  icon="mdi-dots-vertical"
+                  :aria-label="`Actions for ${item.name}`"
+                  @click.stop
+                />
+              </template>
+              <v-list density="compact">
+                <v-list-item
+                  prepend-icon="mdi-delete"
+                  title="Delete"
+                  class="text-error"
+                  @click="confirmDelete(item.name)"
+                />
+              </v-list>
+            </v-menu>
           </template>
 
           <template #no-data>
@@ -161,6 +178,7 @@ const page       = ref(1)
 const pageSize   = ref(20)
 const interfaces = ref<NetworkInterface[]>([])
 const nicLoading = ref(false)
+const lastFetch  = ref<string | null>(null)
 
 const deleteDialog = ref(false)
 const deleteTarget = ref('')
@@ -197,6 +215,11 @@ async function load() {
   }
 }
 
+async function refresh() {
+  await load()
+  lastFetch.value = new Date().toISOString()
+}
+
 function confirmDelete(name: string) { deleteTarget.value = name; deleteDialog.value = true; deleteError.value = null }
 async function doDelete() {
   deleting.value = true
@@ -212,6 +235,6 @@ async function doDelete() {
   }
 }
 
-onMounted(load)
-watch(() => nsStore.active, load)
+onMounted(async () => { await load(); lastFetch.value = new Date().toISOString() })
+watch(() => nsStore.active, async () => { await load(); lastFetch.value = new Date().toISOString() })
 </script>
