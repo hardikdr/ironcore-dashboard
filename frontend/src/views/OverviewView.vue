@@ -78,6 +78,29 @@
             <v-icon size="16" color="primary">mdi-history</v-icon>
             Recent Resources
           </div>
+
+          <!-- Attention items -->
+          <div v-if="pendingMachines || errorVolumes" class="d-flex flex-wrap ga-2 mb-3">
+            <v-chip
+              v-if="pendingMachines"
+              color="warning"
+              size="small"
+              variant="tonal"
+              prepend-icon="mdi-clock-outline"
+            >
+              {{ pendingMachines }} machine{{ pendingMachines > 1 ? 's' : '' }} pending
+            </v-chip>
+            <v-chip
+              v-if="errorVolumes"
+              color="error"
+              size="small"
+              variant="tonal"
+              prepend-icon="mdi-alert-outline"
+            >
+              {{ errorVolumes }} volume{{ errorVolumes > 1 ? 's' : '' }} not available
+            </v-chip>
+          </div>
+
           <v-data-table
             :headers="recentHeaders"
             :items="recentResources"
@@ -253,17 +276,25 @@ const recentHeaders = [
 
 const recentResources = computed(() => {
   const rows: { name: string; type: string; status: string; created: string; link: string }[] = []
-  machinesStore.items.slice(0,4).forEach(m => rows.push({
+  machinesStore.items.forEach(m => rows.push({
     name: m.name, type: 'Machine', status: m.state || m.power || '—', created: m.createdAt, link: `/machines/${m.name}`
   }))
-  volumesStore.items.slice(0,3).forEach(v => rows.push({
+  volumesStore.items.forEach(v => rows.push({
     name: v.name, type: 'Volume', status: v.state || '—', created: v.createdAt, link: `/volumes/${v.name}`
   }))
-  networksStore.items.slice(0,2).forEach((n: { name: string; createdAt?: string }) => rows.push({
+  networksStore.items.forEach((n: { name: string; createdAt?: string }) => rows.push({
     name: n.name, type: 'Network', status: 'Active', created: n.createdAt ?? '', link: `/networks/${n.name}`
   }))
   return rows.sort((a,b) => (b.created > a.created ? 1 : -1)).slice(0, 8)
 })
+
+// ── Attention items ────────────────────────────────────────────────
+const pendingMachines = computed(() =>
+  machinesStore.items.filter(m => m.state?.toLowerCase() === 'pending').length
+)
+const errorVolumes = computed(() =>
+  volumesStore.items.filter(v => v.state?.toLowerCase() !== 'available' && v.state?.toLowerCase() !== 'bound').length
+)
 
 function typeColor(type: string) {
   const m: Record<string, string> = { Machine: 'primary', Volume: 'info', Network: 'accent' }

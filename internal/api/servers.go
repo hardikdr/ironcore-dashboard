@@ -42,12 +42,16 @@ func (h *ServerHandler) List(w http.ResponseWriter, r *http.Request) {
 
 		powerState := "Unknown"
 		claimStatus := "Unclaimed"
+		machineRef := ""
 		if status != nil {
 			if ps, ok := status["powerState"].(string); ok {
 				powerState = ps
 			}
 			if cr, ok := status["claimRef"].(map[string]interface{}); ok && cr != nil {
 				claimStatus = "Claimed"
+				if machineName, ok := cr["name"].(string); ok {
+					machineRef = machineName
+				}
 			}
 		}
 
@@ -66,6 +70,7 @@ func (h *ServerHandler) List(w http.ResponseWriter, r *http.Request) {
 			PowerState:  powerState,
 			Location:    location,
 			ClaimStatus: claimStatus,
+			MachineRef:  machineRef,
 		})
 	}
 	writeJSON(w, http.StatusOK, resp)

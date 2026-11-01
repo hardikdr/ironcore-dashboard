@@ -108,6 +108,7 @@ type VolumeDetailResponse struct {
 	State        string `json:"state"`
 	VolumeID     string `json:"volumeID"`
 	AccessDriver string `json:"accessDriver"`
+	MachineRef   string `json:"machineRef,omitempty"`
 	CreatedAt    string `json:"createdAt"`
 }
 
@@ -195,6 +196,7 @@ type ServerResponse struct {
 	PowerState  string `json:"powerState"`
 	Location    string `json:"location"`
 	ClaimStatus string `json:"claimStatus"`
+	MachineRef  string `json:"machineRef,omitempty"`
 }
 
 // Phase 3 response types

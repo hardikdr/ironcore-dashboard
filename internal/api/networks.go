@@ -94,6 +94,11 @@ func (h *NetworkHandler) ListNetworkInterfaces(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	// Optional filters: ?machine=<name> or ?network=<name>
+	machineFilter := r.URL.Query().Get("machine")
+	networkFilter := r.URL.Query().Get("network")
+
 	resp := make([]NetworkInterfaceResponse, 0, len(list.Items))
 	for _, ni := range list.Items {
 		ips := []string{}
@@ -103,6 +108,13 @@ func (h *NetworkHandler) ListNetworkInterfaces(w http.ResponseWriter, r *http.Re
 		machine := ""
 		if ni.Spec.MachineRef != nil {
 			machine = ni.Spec.MachineRef.Name
+		}
+		// Apply filters if provided
+		if machineFilter != "" && machine != machineFilter {
+			continue
+		}
+		if networkFilter != "" && ni.Spec.NetworkRef.Name != networkFilter {
+			continue
 		}
 		resp = append(resp, NetworkInterfaceResponse{
 			Name:      ni.Name,

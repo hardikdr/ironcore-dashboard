@@ -1,8 +1,20 @@
 const BASE = '/api/v1'
 
+const TOKEN_STORAGE_KEY = 'ironcore-dashboard-token'
+
+/** Returns the bearer token stored in localStorage, or null if not set. */
+export function getAuthToken(): string | null {
+  return localStorage.getItem(TOKEN_STORAGE_KEY)
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = getAuthToken()
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...options
   })
   if (!res.ok) {
@@ -50,7 +62,13 @@ export const api = {
       request<Network>(`/namespaces/${ns}/networks`, { method: 'POST', body: JSON.stringify(body) }),
     delete:         (ns: string, name: string) =>
       request<void>(`/namespaces/${ns}/networks/${name}`, { method: 'DELETE' }),
-    listInterfaces: (ns: string) => request<NetworkInterface[]>(`/namespaces/${ns}/networkinterfaces`)
+    listInterfaces: (ns: string, filters?: { machine?: string; network?: string }) => {
+      const params = new URLSearchParams()
+      if (filters?.machine) params.set('machine', filters.machine)
+      if (filters?.network) params.set('network', filters.network)
+      const qs = params.toString() ? `?${params.toString()}` : ''
+      return request<NetworkInterface[]>(`/namespaces/${ns}/networkinterfaces${qs}`)
+    }
   },
   virtualIPs: {
     list:   (ns: string) => request<VirtualIP[]>(`/namespaces/${ns}/virtualips`),
@@ -124,6 +142,10 @@ export const api = {
   mode: {
     get: () => request<{ demo: boolean }>('/mode'),
   },
+  auth: {
+    checkNamespaceAccess: (ns: string) =>
+      request<{ allowed: boolean; namespace: string }>(`/auth/namespace-access?namespace=${encodeURIComponent(ns)}`),
+  },
 }
 
 // ── Type definitions ──────────────────────────────────────────────────────
@@ -147,7 +169,7 @@ export interface Volume {
 }
 export interface VolumeDetail {
   name: string; namespace: string; volumeClass: string; sizeGiB: number
-  state: string; volumeID: string; accessDriver: string; createdAt: string
+  state: string; volumeID: string; accessDriver: string; machineRef?: string; createdAt: string
 }
 export interface CreateVolumeRequest {
   name: string; volumeClass: string; sizeGiB: number; encryptionSecret?: string
@@ -202,6 +224,7 @@ export interface Server {
   powerState:  string
   location:    string
   claimStatus: string
+  machineRef?: string
 }
 
 export function wsConsoleUrl(ns: string, name: string): string {

@@ -8,6 +8,7 @@
         size="small"
         class="text-white"
         style="border-color: rgba(255,255,255,0.4)"
+        :loading="nsStore.accessChecking"
       >
         <v-icon start>mdi-package-variant</v-icon>
         {{ nsStore.active }}

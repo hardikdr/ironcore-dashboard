@@ -83,6 +83,15 @@
                 <td class="text-medium-emphasis pr-4 py-1">Access Driver</td>
                 <td>{{ detail.accessDriver || '—' }}</td>
               </tr>
+              <tr v-if="detail.machineRef">
+                <td class="text-medium-emphasis pr-4 py-1">Attached to</td>
+                <td>
+                  <router-link :to="`/machines/${detail.machineRef}`" class="text-decoration-none text-primary d-flex align-center ga-1">
+                    <v-icon size="14" color="primary">mdi-server</v-icon>
+                    {{ detail.machineRef }}
+                  </router-link>
+                </td>
+              </tr>
             </tbody>
           </v-table>
         </v-card>

@@ -23,6 +23,12 @@ var (
 var demoFixtures = map[string]any{
 	"namespaces": []string{"default", "dev", "staging", "production"},
 
+	"servers": []ServerResponse{
+		{Name: "server-rack1-01", BMCAddress: "192.168.1.10", PowerState: "On", Location: "eu-central-1/az-a/rack-1", ClaimStatus: "Claimed", MachineRef: "web-frontend-01"},
+		{Name: "server-rack1-02", BMCAddress: "192.168.1.11", PowerState: "On", Location: "eu-central-1/az-a/rack-1", ClaimStatus: "Claimed", MachineRef: "api-server-01"},
+		{Name: "server-rack2-01", BMCAddress: "192.168.1.20", PowerState: "Off", Location: "eu-central-1/az-b/rack-2", ClaimStatus: "Unclaimed"},
+	},
+
 	"machineclasses": []MachineClassResponse{
 		{Name: "x1-small", CPU: "2", RAM: "4Gi"},
 		{Name: "x1-medium", CPU: "4", RAM: "8Gi"},
@@ -152,6 +158,20 @@ func (d *DemoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, demoFixtures["namespaces"])
 		return
 	}
+	// servers (cluster-scoped)
+	if path == "/servers" {
+		writeJSON(w, http.StatusOK, demoFixtures["servers"])
+		return
+	}
+	// auth — namespace access check (demo always returns allowed)
+	if path == "/auth/namespace-access" {
+		ns := r.URL.Query().Get("namespace")
+		if ns == "" {
+			ns = "default"
+		}
+		writeJSON(w, http.StatusOK, map[string]interface{}{"allowed": true, "namespace": ns})
+		return
+	}
 	// machineclasses
 	if path == "/machineclasses" {
 		writeJSON(w, http.StatusOK, demoFixtures["machineclasses"])
@@ -242,13 +262,21 @@ func (d *DemoHandler) handleResource(w http.ResponseWriter, r *http.Request, res
 		if name == "" {
 			writeJSON(w, http.StatusOK, list)
 		} else {
+			// machineRef lookup: map volume name -> attached machine from machine fixtures
+			volMachineMap := map[string]string{}
+			for _, m := range demoFixtures["machines"].([]MachineResponse) {
+				for _, v := range m.Volumes {
+					volMachineMap[v] = m.Name
+				}
+			}
 			for _, v := range list {
 				if v.Name == name {
 					writeJSON(w, http.StatusOK, VolumeDetailResponse{
 						Name: v.Name, Namespace: v.Namespace, VolumeClass: v.VolumeClass,
 						SizeGiB: v.SizeBytes / (1024 * 1024 * 1024),
 						State: v.State, VolumeID: "vol-demo-" + v.Name,
-						AccessDriver: "csi", CreatedAt: v.CreatedAt,
+						AccessDriver: "csi", MachineRef: volMachineMap[v.Name],
+						CreatedAt: v.CreatedAt,
 					})
 					return
 				}
@@ -273,7 +301,24 @@ func (d *DemoHandler) handleResource(w http.ResponseWriter, r *http.Request, res
 			writeError(w, http.StatusNotFound, "network not found: "+name)
 		}
 	case "networkinterfaces":
-		writeJSON(w, http.StatusOK, demoFixtures["networkinterfaces"])
+		all := demoFixtures["networkinterfaces"].([]NetworkInterfaceResponse)
+		machineFilter := r.URL.Query().Get("machine")
+		networkFilter := r.URL.Query().Get("network")
+		if machineFilter == "" && networkFilter == "" {
+			writeJSON(w, http.StatusOK, all)
+		} else {
+			filtered := make([]NetworkInterfaceResponse, 0, len(all))
+			for _, ni := range all {
+				if machineFilter != "" && ni.Machine != machineFilter {
+					continue
+				}
+				if networkFilter != "" && ni.Network != networkFilter {
+					continue
+				}
+				filtered = append(filtered, ni)
+			}
+			writeJSON(w, http.StatusOK, filtered)
+		}
 	case "natgateways":
 		if name == "" {
 			writeJSON(w, http.StatusOK, demoFixtures["natgateways"])

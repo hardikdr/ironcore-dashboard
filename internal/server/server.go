@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -18,6 +19,25 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"nhooyr.io/websocket"
 )
+
+// contextKeyToken is an unexported type used as the context key for the bearer token.
+type contextKeyToken struct{}
+
+// bearerForwardMiddleware extracts the Authorization: Bearer <token> header from
+// incoming requests and stores the token in the request context. The token is
+// never logged, never written to disk, and lives only for the duration of the
+// request.
+//
+// TODO: Pass token to k8s client via impersonation — requires OIDC issuer config.
+func bearerForwardMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if authHeader := r.Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer ") {
+			token := strings.TrimPrefix(authHeader, "Bearer ")
+			r = r.WithContext(context.WithValue(r.Context(), contextKeyToken{}, token))
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 type Server struct {
 	router   *chi.Mux
@@ -59,8 +79,12 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dyna
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{"http://localhost:5173", "http://localhost:8080"},
 		AllowedMethods: []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"Content-Type"},
+		AllowedHeaders: []string{"Content-Type", "Authorization"},
 	}))
+
+	// bearerForwardMiddleware stores any incoming Bearer token in the request
+	// context so that downstream handlers can access it if needed.
+	r.Use(bearerForwardMiddleware)
 
 	// Health check
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -73,6 +97,10 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dyna
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"demo":false}`))
 	})
+
+	// Namespace access check — SelfSubjectAccessReview for namespace switcher
+	nah := api.NewNamespaceAccessHandler(k8sClient)
+	r.Get("/api/v1/auth/namespace-access", nah.Check)
 
 	// Namespace list (for project/namespace switcher)
 	r.Get("/api/v1/namespaces", func(w http.ResponseWriter, r *http.Request) {

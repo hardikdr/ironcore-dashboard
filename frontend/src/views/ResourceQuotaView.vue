@@ -19,6 +19,10 @@
     </template>
     <template v-else>
       <div v-for="quota in items" :key="quota.name" class="mb-6">
+        <div class="text-caption text-medium-emphasis mb-1">
+          <v-icon size="12" class="mr-1">mdi-folder-outline</v-icon>
+          Namespace: <strong>{{ quota.namespace }}</strong>
+        </div>
         <div class="text-subtitle-1 font-weight-bold mb-3">{{ quota.name }}</div>
         <v-card :style="cardStyle" variant="flat" rounded="lg">
           <v-data-table

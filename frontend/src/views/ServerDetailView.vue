@@ -37,6 +37,10 @@
           <v-table density="compact">
             <tbody>
               <tr>
+                <td class="text-medium-emphasis pr-4 py-1" width="140">Name</td>
+                <td><code>{{ server.name }}</code></td>
+              </tr>
+              <tr>
                 <td class="text-medium-emphasis pr-4 py-1">Address</td>
                 <td><code>{{ server.bmcAddress || '—' }}</code></td>
               </tr>
@@ -50,6 +54,15 @@
                   <v-chip :color="server.claimStatus === 'Claimed' ? 'primary' : 'default'" size="x-small" variant="tonal">
                     {{ server.claimStatus }}
                   </v-chip>
+                </td>
+              </tr>
+              <tr v-if="server.machineRef">
+                <td class="text-medium-emphasis pr-4 py-1">Machine</td>
+                <td>
+                  <router-link :to="`/machines/${server.machineRef}`" class="text-decoration-none text-primary d-flex align-center ga-1">
+                    <v-icon size="14" color="primary">mdi-server</v-icon>
+                    {{ server.machineRef }}
+                  </router-link>
                 </td>
               </tr>
             </tbody>
