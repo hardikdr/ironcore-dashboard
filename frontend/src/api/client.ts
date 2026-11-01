@@ -121,6 +121,9 @@ export const api = {
   bucketPools: {
     list: () => request<BucketPool[]>('/bucketpools'),
   },
+  mode: {
+    get: () => request<{ demo: boolean }>('/mode'),
+  },
 }
 
 // ── Type definitions ──────────────────────────────────────────────────────

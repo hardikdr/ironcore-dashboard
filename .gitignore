@@ -45,3 +45,9 @@ docs/superpowers/
 
 # Git worktrees
 .worktrees/
+
+# Playwright test artifacts (failure screenshots, traces, report)
+test-results/
+frontend/test-results/
+playwright-report/
+frontend/playwright-report/

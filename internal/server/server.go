@@ -40,6 +40,10 @@ func NewDemo(frontendFS fs.FS) *Server {
 		AllowedHeaders: []string{"Content-Type"},
 	}))
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
+	r.Get("/api/v1/mode", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"demo":true}`))
+	})
 	r.Mount("/api/v1", demo)
 	mountFrontend(r, frontendFS)
 	s.router = r
@@ -62,6 +66,12 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dyna
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
+	})
+
+	// Server mode — tells the frontend whether this is demo or real mode
+	r.Get("/api/v1/mode", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"demo":false}`))
 	})
 
 	// Namespace list (for project/namespace switcher)

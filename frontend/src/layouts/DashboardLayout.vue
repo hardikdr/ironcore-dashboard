@@ -14,7 +14,7 @@
       </template>
 
       <template #append>
-        <div class="d-flex align-center ga-1 pr-2" style="min-width:0; overflow:hidden;">
+        <div class="d-flex align-center ga-1" style="min-width:0; padding-right:12px;">
           <!-- Search: full button on ≥sm, icon-only on xs -->
           <v-btn
             v-if="!xs"
@@ -41,9 +41,22 @@
             @click="searchOpen = true"
           />
 
+          <!-- DEMO MODE indicator (visible when running against fixture data) -->
+          <v-chip
+            v-if="isDemoMode"
+            color="warning"
+            variant="tonal"
+            size="small"
+            prepend-icon="mdi-test-tube"
+            class="font-weight-bold"
+            title="Running with fixture data — not connected to a real cluster"
+          >
+            <span v-if="!xs">DEMO</span>
+          </v-chip>
+
           <!-- Cluster status: chip on ≥md, dot-icon on smaller -->
           <v-chip
-            v-if="mdAndUp"
+            v-if="mdAndUp && !isDemoMode"
             :color="clusterOk ? 'success' : 'error'"
             variant="tonal"
             size="small"
@@ -52,7 +65,7 @@
             {{ clusterOk ? 'Connected' : 'Disconnected' }}
           </v-chip>
           <v-icon
-            v-else
+            v-else-if="!isDemoMode"
             :color="clusterOk ? 'success' : 'error'"
             size="18"
             :title="clusterOk ? 'Cluster connected' : 'Cluster disconnected'"
@@ -114,8 +127,8 @@
             @click="refreshAll"
           />
 
-          <!-- User avatar -->
-          <v-avatar color="primary" size="30" style="cursor:pointer; flex-shrink:0;">
+          <!-- User avatar — flex-shrink:0 + explicit margin ensures it never gets clipped -->
+          <v-avatar color="primary" size="30" style="cursor:pointer; flex-shrink:0; margin-right:0;">
             <span class="text-caption font-weight-bold">IC</span>
           </v-avatar>
         </div>
@@ -203,6 +216,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useTheme, useDisplay } from 'vuetify'
 import { useRoute } from 'vue-router'
+import { api } from '@/api/client'
 import { useNamespaceStore }     from '@/stores/namespace'
 import { useMachinesStore }      from '@/stores/machines'
 import { useVolumesStore }       from '@/stores/volumes'
@@ -255,6 +269,7 @@ function toggleTheme() {
 }
 
 const clusterOk    = ref(true)
+const isDemoMode   = ref(false)
 const machineCount = computed(() => machinesStore.items.length || undefined)
 const anyLoading   = computed(() =>
   machinesStore.loading || volumesStore.loading || networksStore.loading
@@ -296,6 +311,12 @@ onMounted(async () => {
     clusterOk.value = true
   } catch {
     clusterOk.value = false
+  }
+  try {
+    const mode = await api.mode.get()
+    isDemoMode.value = mode.demo
+  } catch {
+    isDemoMode.value = false
   }
   refreshTimer = setInterval(() => refreshAll(true), 30_000)
 })

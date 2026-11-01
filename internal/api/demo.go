@@ -231,9 +231,7 @@ func (d *DemoHandler) handleResource(w http.ResponseWriter, r *http.Request, res
 		} else {
 			for _, m := range list {
 				if m.Name == name {
-					writeJSON(w, http.StatusOK, VolumeDetailResponse{
-						Name: m.Name, Namespace: m.Namespace,
-					})
+					writeJSON(w, http.StatusOK, m) // MachineResponse has all fields needed for detail view
 					return
 				}
 			}
