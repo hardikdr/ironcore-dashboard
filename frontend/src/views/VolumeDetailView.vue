@@ -103,6 +103,15 @@
       <ResourceEvents :resource-name="name" resource-kind="Volume" />
     </v-card>
 
+    <!-- Conditions section -->
+    <v-card v-if="detail" :style="cardStyle" variant="flat" rounded="lg" class="pa-4 mt-4">
+      <div class="text-subtitle-2 font-weight-bold mb-3 d-flex align-center ga-2">
+        <v-icon size="16" color="primary">mdi-check-all</v-icon>
+        Status Conditions
+      </div>
+      <StatusConditions :conditions="detail.conditions" />
+    </v-card>
+
     <!-- YAML section -->
     <div v-if="detail" class="mt-4">
       <ResourceYaml :resource="detail as Record<string, unknown>" :filename="name" />
@@ -140,6 +149,7 @@ import StatusBadge     from '@/components/common/StatusBadge.vue'
 import CopyChip        from '@/components/common/CopyChip.vue'
 import ResourceEvents  from '@/components/common/ResourceEvents.vue'
 import ResourceYaml    from '@/components/common/ResourceYaml.vue'
+import StatusConditions from '@/components/common/StatusConditions.vue'
 
 const route   = useRoute()
 const router  = useRouter()

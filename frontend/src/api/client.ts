@@ -150,10 +150,16 @@ export const api = {
 
 // ── Type definitions ──────────────────────────────────────────────────────
 
+export interface Condition {
+  type: string; status: 'True' | 'False' | 'Unknown' | string
+  reason?: string; message?: string; lastTransitionTime: string
+}
+
 export interface Machine {
   name: string; namespace: string; state: string; power: string
   machineClass: string; image: string; ips: string[]; volumes: string[]
   annotations?: Record<string, string>; createdAt: string
+  conditions?: Condition[]
 }
 export interface CreateMachineRequest {
   name: string; machineClass: string; image: string
@@ -170,6 +176,7 @@ export interface Volume {
 export interface VolumeDetail {
   name: string; namespace: string; volumeClass: string; sizeGiB: number
   state: string; volumeID: string; accessDriver: string; machineRef?: string; createdAt: string
+  conditions?: Condition[]
 }
 export interface CreateVolumeRequest {
   name: string; volumeClass: string; sizeGiB: number; encryptionSecret?: string

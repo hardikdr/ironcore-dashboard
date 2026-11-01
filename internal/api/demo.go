@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -51,11 +52,36 @@ var demoFixtures = map[string]any{
 	},
 
 	"machines": []MachineResponse{
-		{Name: "web-frontend-01", Namespace: "default", State: "Running", Power: "On", MachineClass: "x1-medium", Image: "gardenlinux@sha256:abc123", IPs: []string{"10.0.0.10"}, Volumes: []string{"data-01"}, CreatedAt: demoNow2d},
-		{Name: "web-frontend-02", Namespace: "default", State: "Running", Power: "On", MachineClass: "x1-medium", Image: "gardenlinux@sha256:abc123", IPs: []string{"10.0.0.11"}, Volumes: []string{"data-02"}, CreatedAt: demoNow2d},
-		{Name: "api-server-01", Namespace: "default", State: "Running", Power: "On", MachineClass: "x1-large", Image: "gardenlinux@sha256:def456", IPs: []string{"10.0.0.20"}, Volumes: []string{"api-data"}, CreatedAt: demoNow1d},
-		{Name: "worker-batch-01", Namespace: "default", State: "Pending", Power: "Off", MachineClass: "x1-xlarge", Image: "gardenlinux@sha256:ghi789", IPs: []string{}, Volumes: []string{}, CreatedAt: demoNow1h},
-		{Name: "gpu-trainer-01", Namespace: "default", State: "Shutdown", Power: "Off", MachineClass: "gpu-v100-1", Image: "gardenlinux@sha256:jkl012", IPs: []string{"10.0.0.30"}, Volumes: []string{"model-store"}, CreatedAt: demoNow2h},
+		{Name: "web-frontend-01", Namespace: "default", State: "Running", Power: "On", MachineClass: "x1-medium", Image: "gardenlinux@sha256:abc123", IPs: []string{"10.0.0.10"}, Volumes: []string{"data-01"}, CreatedAt: demoNow2d,
+			Conditions: []ConditionResponse{
+				{Type: "Ready", Status: "True", Reason: "MachineReady", Message: "Machine is running and healthy", LastTransitionTime: demoNow2d},
+				{Type: "NetworkReady", Status: "True", Reason: "NetworkConfigured", Message: "Network interface configured successfully", LastTransitionTime: demoNow2d},
+			},
+		},
+		{Name: "web-frontend-02", Namespace: "default", State: "Running", Power: "On", MachineClass: "x1-medium", Image: "gardenlinux@sha256:abc123", IPs: []string{"10.0.0.11"}, Volumes: []string{"data-02"}, CreatedAt: demoNow2d,
+			Conditions: []ConditionResponse{
+				{Type: "Ready", Status: "True", Reason: "MachineReady", Message: "Machine is running and healthy", LastTransitionTime: demoNow2d},
+				{Type: "NetworkReady", Status: "True", Reason: "NetworkConfigured", Message: "Network interface configured successfully", LastTransitionTime: demoNow2d},
+			},
+		},
+		{Name: "api-server-01", Namespace: "default", State: "Running", Power: "On", MachineClass: "x1-large", Image: "gardenlinux@sha256:def456", IPs: []string{"10.0.0.20"}, Volumes: []string{"api-data"}, CreatedAt: demoNow1d,
+			Conditions: []ConditionResponse{
+				{Type: "Ready", Status: "True", Reason: "MachineReady", Message: "Machine is running and healthy", LastTransitionTime: demoNow1d},
+				{Type: "NetworkReady", Status: "True", Reason: "NetworkConfigured", LastTransitionTime: demoNow1d},
+				{Type: "VolumeAttached", Status: "True", Reason: "VolumesMounted", LastTransitionTime: demoNow1d},
+			},
+		},
+		{Name: "worker-batch-01", Namespace: "default", State: "Pending", Power: "Off", MachineClass: "x1-xlarge", Image: "gardenlinux@sha256:ghi789", IPs: []string{}, Volumes: []string{}, CreatedAt: demoNow1h,
+			Conditions: []ConditionResponse{
+				{Type: "Ready", Status: "False", Reason: "InsufficientResources", Message: "0/2 nodes are available: insufficient CPU", LastTransitionTime: demoNow1h},
+				{Type: "NetworkReady", Status: "Unknown", Reason: "Pending", Message: "Waiting for machine to become ready", LastTransitionTime: demoNow1h},
+			},
+		},
+		{Name: "gpu-trainer-01", Namespace: "default", State: "Shutdown", Power: "Off", MachineClass: "gpu-v100-1", Image: "gardenlinux@sha256:jkl012", IPs: []string{"10.0.0.30"}, Volumes: []string{"model-store"}, CreatedAt: demoNow2h,
+			Conditions: []ConditionResponse{
+				{Type: "Ready", Status: "False", Reason: "MachinePoweredOff", Message: "Machine has been powered off", LastTransitionTime: demoNow2h},
+			},
+		},
 	},
 
 	"volumes": []VolumeResponse{
@@ -221,6 +247,11 @@ func (d *DemoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 			return
 		}
+		// handle yaml sub-path
+		if len(parts) > 3 && parts[3] == "yaml" && r.Method == http.MethodGet {
+			d.handleYAML(w, r, resource, name)
+			return
+		}
 		d.handleResource(w, r, resource, name)
 		return
 	}
@@ -271,12 +302,21 @@ func (d *DemoHandler) handleResource(w http.ResponseWriter, r *http.Request, res
 			}
 			for _, v := range list {
 				if v.Name == name {
+					conditions := []ConditionResponse{
+						{Type: "Available", Status: "True", Reason: "VolumeProvisioned", Message: "Volume is provisioned and ready", LastTransitionTime: v.CreatedAt},
+					}
+					if v.State == "Pending" {
+						conditions = []ConditionResponse{
+							{Type: "Available", Status: "False", Reason: "VolumeProvisioning", Message: "Volume is being provisioned", LastTransitionTime: v.CreatedAt},
+						}
+					}
 					writeJSON(w, http.StatusOK, VolumeDetailResponse{
 						Name: v.Name, Namespace: v.Namespace, VolumeClass: v.VolumeClass,
 						SizeGiB: v.SizeBytes / (1024 * 1024 * 1024),
 						State: v.State, VolumeID: "vol-demo-" + v.Name,
 						AccessDriver: "csi", MachineRef: volMachineMap[v.Name],
 						CreatedAt: v.CreatedAt,
+						Conditions: conditions,
 					})
 					return
 				}
@@ -294,6 +334,9 @@ func (d *DemoHandler) handleResource(w http.ResponseWriter, r *http.Request, res
 						Name: n.Name, Namespace: n.Namespace,
 						State: "Available", ProviderID: "demo-provider-" + n.Name,
 						Peerings: []NetworkPeeringStatus{}, CreatedAt: n.CreatedAt,
+						Conditions: []ConditionResponse{
+							{Type: "Available", Status: "True", Reason: "NetworkProvisioned", Message: "Network is available", LastTransitionTime: n.CreatedAt},
+						},
 					})
 					return
 				}
@@ -407,5 +450,97 @@ func (d *DemoHandler) handleResource(w http.ResponseWriter, r *http.Request, res
 		}
 	default:
 		writeError(w, http.StatusNotFound, "demo: unknown resource: "+resource)
+	}
+}
+
+// handleYAML returns a representative fixture as pretty-printed JSON for the YAML tab.
+func (d *DemoHandler) handleYAML(w http.ResponseWriter, r *http.Request, resource, name string) {
+	type meta struct {
+		Name      string            `json:"name"`
+		Namespace string            `json:"namespace"`
+		Labels    map[string]string `json:"labels,omitempty"`
+		CreatedAt string            `json:"creationTimestamp"`
+	}
+	type rawResource struct {
+		APIVersion string `json:"apiVersion"`
+		Kind       string `json:"kind"`
+		Metadata   meta   `json:"metadata"`
+		Spec       any    `json:"spec"`
+		Status     any    `json:"status"`
+	}
+	switch resource {
+	case "machines":
+		list := demoFixtures["machines"].([]MachineResponse)
+		for _, m := range list {
+			if m.Name == name {
+				obj := rawResource{
+					APIVersion: "compute.ironcore.dev/v1alpha1",
+					Kind:       "Machine",
+					Metadata:   meta{Name: m.Name, Namespace: m.Namespace, CreatedAt: m.CreatedAt},
+					Spec: map[string]any{
+						"machineClassRef": map[string]string{"name": m.MachineClass},
+						"image":           m.Image,
+						"power":           m.Power,
+					},
+					Status: map[string]any{
+						"state":      m.State,
+						"conditions": m.Conditions,
+					},
+				}
+				w.Header().Set("Content-Type", "application/json")
+				enc := json.NewEncoder(w)
+				enc.SetIndent("", "  ")
+				enc.Encode(obj)
+				return
+			}
+		}
+		writeError(w, http.StatusNotFound, "machine not found: "+name)
+	case "volumes":
+		list := demoFixtures["volumes"].([]VolumeResponse)
+		for _, v := range list {
+			if v.Name == name {
+				obj := rawResource{
+					APIVersion: "storage.ironcore.dev/v1alpha1",
+					Kind:       "Volume",
+					Metadata:   meta{Name: v.Name, Namespace: v.Namespace, CreatedAt: v.CreatedAt},
+					Spec: map[string]any{
+						"volumeClassRef": map[string]string{"name": v.VolumeClass},
+						"resources":      map[string]string{"storage": fmt.Sprintf("%dGi", v.SizeBytes/(1024*1024*1024))},
+					},
+					Status: map[string]any{
+						"state":    v.State,
+						"volumeID": "vol-demo-" + v.Name,
+						"access":   map[string]string{"driver": "csi", "handle": "vol-demo-" + v.Name},
+					},
+				}
+				w.Header().Set("Content-Type", "application/json")
+				enc := json.NewEncoder(w)
+				enc.SetIndent("", "  ")
+				enc.Encode(obj)
+				return
+			}
+		}
+		writeError(w, http.StatusNotFound, "volume not found: "+name)
+	case "networks":
+		list := demoFixtures["networks"].([]NetworkResponse)
+		for _, n := range list {
+			if n.Name == name {
+				obj := rawResource{
+					APIVersion: "networking.ironcore.dev/v1alpha1",
+					Kind:       "Network",
+					Metadata:   meta{Name: n.Name, Namespace: n.Namespace, CreatedAt: n.CreatedAt},
+					Spec:       map[string]any{"providerID": "demo-provider-" + n.Name},
+					Status:     map[string]any{"state": "Available", "peerings": []any{}},
+				}
+				w.Header().Set("Content-Type", "application/json")
+				enc := json.NewEncoder(w)
+				enc.SetIndent("", "  ")
+				enc.Encode(obj)
+				return
+			}
+		}
+		writeError(w, http.StatusNotFound, "network not found: "+name)
+	default:
+		writeError(w, http.StatusNotFound, "demo: yaml not supported for resource: "+resource)
 	}
 }

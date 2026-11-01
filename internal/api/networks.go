@@ -56,6 +56,24 @@ func (h *NetworkHandler) GetNetwork(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *NetworkHandler) GetNetworkRaw(w http.ResponseWriter, r *http.Request) {
+	ns, name := chi.URLParam(r, "ns"), chi.URLParam(r, "name")
+	n, err := h.cs.NetworkingV1alpha1().Networks(ns).Get(r.Context(), name, metav1.GetOptions{})
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	n.TypeMeta = metav1.TypeMeta{
+		APIVersion: "networking.ironcore.dev/v1alpha1",
+		Kind:       "Network",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	enc.Encode(n)
+}
+
 func (h *NetworkHandler) CreateNetwork(w http.ResponseWriter, r *http.Request) {
 	ns := chi.URLParam(r, "ns")
 	var req CreateNetworkRequest

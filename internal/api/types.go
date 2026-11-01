@@ -6,16 +6,17 @@ import (
 )
 
 type MachineResponse struct {
-	Name         string            `json:"name"`
-	Namespace    string            `json:"namespace"`
-	State        string            `json:"state"`
-	Power        string            `json:"power"`
-	MachineClass string            `json:"machineClass"`
-	Image        string            `json:"image"`
-	IPs          []string          `json:"ips"`
-	Volumes      []string          `json:"volumes"`
-	Annotations  map[string]string `json:"annotations,omitempty"`
-	CreatedAt    string            `json:"createdAt"`
+	Name         string              `json:"name"`
+	Namespace    string              `json:"namespace"`
+	State        string              `json:"state"`
+	Power        string              `json:"power"`
+	MachineClass string              `json:"machineClass"`
+	Image        string              `json:"image"`
+	IPs          []string            `json:"ips"`
+	Volumes      []string            `json:"volumes"`
+	Annotations  map[string]string   `json:"annotations,omitempty"`
+	CreatedAt    string              `json:"createdAt"`
+	Conditions   []ConditionResponse `json:"conditions,omitempty"`
 }
 
 type VolumeResponse struct {
@@ -101,15 +102,16 @@ type CreateVolumeRequest struct {
 }
 
 type VolumeDetailResponse struct {
-	Name         string `json:"name"`
-	Namespace    string `json:"namespace"`
-	VolumeClass  string `json:"volumeClass"`
-	SizeGiB      int64  `json:"sizeGiB"`
-	State        string `json:"state"`
-	VolumeID     string `json:"volumeID"`
-	AccessDriver string `json:"accessDriver"`
-	MachineRef   string `json:"machineRef,omitempty"`
-	CreatedAt    string `json:"createdAt"`
+	Name         string              `json:"name"`
+	Namespace    string              `json:"namespace"`
+	VolumeClass  string              `json:"volumeClass"`
+	SizeGiB      int64               `json:"sizeGiB"`
+	State        string              `json:"state"`
+	VolumeID     string              `json:"volumeID"`
+	AccessDriver string              `json:"accessDriver"`
+	MachineRef   string              `json:"machineRef,omitempty"`
+	CreatedAt    string              `json:"createdAt"`
+	Conditions   []ConditionResponse `json:"conditions,omitempty"`
 }
 
 type CreateNetworkRequest struct {
@@ -128,6 +130,7 @@ type NetworkDetailResponse struct {
 	ProviderID string                 `json:"providerID"`
 	Peerings   []NetworkPeeringStatus `json:"peerings"`
 	CreatedAt  string                 `json:"createdAt"`
+	Conditions []ConditionResponse    `json:"conditions,omitempty"`
 }
 
 type CreateVirtualIPRequest struct {
@@ -281,6 +284,15 @@ type BucketPoolResponse struct {
 	State                  string   `json:"state"`
 	AvailableBucketClasses []string `json:"availableBucketClasses"`
 	CreatedAt              string   `json:"createdAt"`
+}
+
+// ConditionResponse represents a Kubernetes status condition.
+type ConditionResponse struct {
+	Type               string `json:"type"`
+	Status             string `json:"status"`
+	Reason             string `json:"reason,omitempty"`
+	Message            string `json:"message,omitempty"`
+	LastTransitionTime string `json:"lastTransitionTime,omitempty"`
 }
 
 // EventResponse is a Kubernetes Event, filtered by regardingName/kind.

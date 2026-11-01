@@ -65,6 +65,9 @@
         <v-tab value="events">
           <v-icon size="16" class="mr-1">mdi-clock-outline</v-icon>Events
         </v-tab>
+        <v-tab value="conditions">
+          <v-icon size="16" class="mr-1">mdi-check-all</v-icon>Conditions
+        </v-tab>
         <v-tab value="yaml">
           <v-icon size="16" class="mr-1">mdi-code-braces</v-icon>YAML
         </v-tab>
@@ -242,6 +245,17 @@
           </v-card>
         </v-window-item>
 
+        <!-- ── Conditions ──────────────────────────────────── -->
+        <v-window-item value="conditions">
+          <v-card :style="cardStyle" variant="flat" class="pa-4">
+            <div class="text-subtitle-2 font-weight-bold mb-4 d-flex align-center ga-2">
+              <v-icon size="16" color="primary">mdi-check-all</v-icon>
+              Status Conditions
+            </div>
+            <StatusConditions :conditions="machine?.conditions" />
+          </v-card>
+        </v-window-item>
+
         <!-- ── YAML ─────────────────────────────────────────── -->
         <v-window-item value="yaml">
           <ResourceYaml v-if="machine" :resource="machine as Record<string, unknown>" :filename="machineName" />
@@ -262,8 +276,9 @@ import { relativeTime, absoluteTime } from '@/composables/useTime'
 import PageHeader      from '@/components/common/PageHeader.vue'
 import StatusBadge     from '@/components/common/StatusBadge.vue'
 import CopyChip        from '@/components/common/CopyChip.vue'
-import ResourceEvents  from '@/components/common/ResourceEvents.vue'
-import ResourceYaml    from '@/components/common/ResourceYaml.vue'
+import ResourceEvents    from '@/components/common/ResourceEvents.vue'
+import ResourceYaml      from '@/components/common/ResourceYaml.vue'
+import StatusConditions  from '@/components/common/StatusConditions.vue'
 
 // Dynamic import — xterm.js only loads when this component renders
 const MachineTerminal = defineAsyncComponent(

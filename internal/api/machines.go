@@ -171,6 +171,25 @@ func (h *MachineHandler) ListMachineClasses(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, resp)
 }
 
+func (h *MachineHandler) GetRaw(w http.ResponseWriter, r *http.Request) {
+	ns, name := chi.URLParam(r, "ns"), chi.URLParam(r, "name")
+	m, err := h.cs.ComputeV1alpha1().Machines(ns).Get(r.Context(), name, metav1.GetOptions{})
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	// Set TypeMeta so the JSON output includes apiVersion/kind
+	m.TypeMeta = metav1.TypeMeta{
+		APIVersion: "compute.ironcore.dev/v1alpha1",
+		Kind:       "Machine",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	enc.Encode(m)
+}
+
 // machineToResponse converts a Machine to a MachineResponse, fetching NIC IPs when available.
 func machineToResponse(cs versioned.Interface, m *computev1alpha1.Machine, r *http.Request) MachineResponse {
 	ips := []string{}
@@ -188,6 +207,21 @@ func machineToResponse(cs versioned.Interface, m *computev1alpha1.Machine, r *ht
 	for _, v := range m.Spec.Volumes {
 		vols = append(vols, v.Name)
 	}
+	conditions := make([]ConditionResponse, 0, len(m.Status.Conditions))
+	for _, c := range m.Status.Conditions {
+		cr := ConditionResponse{
+			Type:   string(c.Type),
+			Status: string(c.Status),
+			Reason: c.Reason,
+		}
+		if c.Message != "" {
+			cr.Message = c.Message
+		}
+		if !c.LastTransitionTime.IsZero() {
+			cr.LastTransitionTime = c.LastTransitionTime.UTC().Format("2006-01-02T15:04:05Z")
+		}
+		conditions = append(conditions, cr)
+	}
 	return MachineResponse{
 		Name:         m.Name,
 		Namespace:    m.Namespace,
@@ -199,5 +233,6 @@ func machineToResponse(cs versioned.Interface, m *computev1alpha1.Machine, r *ht
 		Volumes:      vols,
 		Annotations:  m.Annotations,
 		CreatedAt:    m.CreationTimestamp.UTC().Format("2006-01-02T15:04:05Z"),
+		Conditions:   conditions,
 	}
 }

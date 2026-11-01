@@ -238,7 +238,66 @@ test.describe('Edge states', () => {
     await page.locator('[aria-label="Toggle navigation drawer"]').click()
     await page.waitForTimeout(300)
     const drawerAfter = await page.locator('.v-navigation-drawer').boundingBox()
-    // Rail mode should make drawer narrower
     expect(drawerAfter && drawerBefore && drawerAfter.width < drawerBefore.width).toBe(true)
+  })
+})
+
+/**
+ * Machine detail tests — verify the previously-broken detail page works.
+ */
+test.describe('Machine detail', () => {
+  test('machine detail page shows machine name', async ({ page }) => {
+    const errors: string[] = []
+    page.on('pageerror', err => errors.push(err.message))
+    await page.goto('/machines/web-frontend-01', { waitUntil: 'networkidle' })
+    await expect(page.locator('text=web-frontend-01').first()).toBeVisible({ timeout: 8000 })
+    expect(errors).toHaveLength(0)
+  })
+
+  test('machine detail shows machineClass (regression for VolumeDetailResponse bug)', async ({ page }) => {
+    await page.goto('/machines/web-frontend-01', { waitUntil: 'networkidle' })
+    await expect(page.locator('text=x1-medium').first()).toBeVisible({ timeout: 8000 })
+  })
+
+  test('machine detail has Events tab', async ({ page }) => {
+    await page.goto('/machines/web-frontend-01', { waitUntil: 'networkidle' })
+    const eventsTab = page.locator('[role="tab"]').filter({ hasText: /events/i })
+    await expect(eventsTab).toBeVisible({ timeout: 8000 })
+    await eventsTab.click()
+    await expect(eventsTab).toBeVisible()
+  })
+
+  test('machine detail has YAML tab', async ({ page }) => {
+    await page.goto('/machines/web-frontend-01', { waitUntil: 'networkidle' })
+    const yamlTab = page.locator('[role="tab"]').filter({ hasText: /yaml/i })
+    await expect(yamlTab).toBeVisible({ timeout: 8000 })
+    await yamlTab.click()
+    await expect(page.locator('pre').first()).toBeVisible({ timeout: 5000 })
+  })
+
+  test('non-existent machine shows error state', async ({ page }) => {
+    await page.goto('/machines/definitely-not-a-machine', { waitUntil: 'networkidle' })
+    const errorIndicator = page
+      .locator('text=not found').or(page.locator('text=Not Found'))
+      .or(page.locator('text=Failed to load')).or(page.locator('.v-alert'))
+      .first()
+    await expect(errorIndicator).toBeVisible({ timeout: 8000 })
+  })
+})
+
+/**
+ * Demo mode indicator tests.
+ */
+test.describe('Demo mode indicator', () => {
+  test('DEMO chip is visible in the top bar', async ({ page }) => {
+    await page.goto('/overview', { waitUntil: 'networkidle' })
+    const demoChip = page.locator('.v-chip').filter({ hasText: /demo/i }).first()
+    await expect(demoChip).toBeVisible({ timeout: 8000 })
+  })
+
+  test('cluster connected chip is hidden in demo mode', async ({ page }) => {
+    await page.goto('/overview', { waitUntil: 'networkidle' })
+    const connectedChip = page.locator('.v-chip').filter({ hasText: /connected/i })
+    await expect(connectedChip).toBeHidden()
   })
 })

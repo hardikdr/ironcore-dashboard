@@ -92,6 +92,18 @@ func (h *VolumeHandler) Get(w http.ResponseWriter, r *http.Request) {
 		volumeID = v.Status.Access.Handle
 		accessDriver = v.Status.Access.Driver
 	}
+	conditions := make([]ConditionResponse, 0, len(v.Status.Conditions))
+	for _, c := range v.Status.Conditions {
+		cr := ConditionResponse{
+			Type:   string(c.Type),
+			Status: string(c.Status),
+			Reason: c.Reason,
+		}
+		if c.Message != "" {
+			cr.Message = c.Message
+		}
+		conditions = append(conditions, cr)
+	}
 	writeJSON(w, http.StatusOK, VolumeDetailResponse{
 		Name:         v.Name,
 		Namespace:    v.Namespace,
@@ -101,7 +113,26 @@ func (h *VolumeHandler) Get(w http.ResponseWriter, r *http.Request) {
 		VolumeID:     volumeID,
 		AccessDriver: accessDriver,
 		CreatedAt:    v.CreationTimestamp.UTC().Format("2006-01-02T15:04:05Z"),
+		Conditions:   conditions,
 	})
+}
+
+func (h *VolumeHandler) GetRaw(w http.ResponseWriter, r *http.Request) {
+	ns, name := chi.URLParam(r, "ns"), chi.URLParam(r, "name")
+	v, err := h.cs.StorageV1alpha1().Volumes(ns).Get(r.Context(), name, metav1.GetOptions{})
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	v.TypeMeta = metav1.TypeMeta{
+		APIVersion: "storage.ironcore.dev/v1alpha1",
+		Kind:       "Volume",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	enc.Encode(v)
 }
 
 func volumeToResponse(v *storagev1alpha1.Volume) VolumeResponse {

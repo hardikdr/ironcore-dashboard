@@ -1,44 +1,72 @@
 <template>
   <div>
-    <div v-if="!conditions || conditions.length === 0" class="text-caption text-medium-emphasis pa-4">
-      No conditions reported.
+    <!-- Summary chip row -->
+    <div class="d-flex align-center ga-2 mb-2">
+      <v-chip
+        v-if="!loading && conditions.length > 0"
+        :color="summaryColor"
+        size="small"
+        variant="tonal"
+        :prepend-icon="summaryIcon"
+      >
+        {{ summaryLabel }}
+      </v-chip>
+      <v-skeleton-loader v-else-if="loading" type="chip" width="100" />
+      <span v-else class="text-caption text-medium-emphasis">No conditions reported</span>
+
+      <v-btn
+        v-if="!loading && conditions.length > 0"
+        variant="text"
+        size="x-small"
+        :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+        :aria-expanded="expanded.toString()"
+        aria-label="Toggle conditions"
+        @click="expanded = !expanded"
+      />
     </div>
-    <v-table v-else density="compact">
-      <thead>
-        <tr>
-          <th style="width:120px">Type</th>
-          <th style="width:80px">Status</th>
-          <th>Reason</th>
-          <th>Message</th>
-          <th style="width:120px">Last Transition</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="c in conditions" :key="c.type">
-          <td><code class="text-caption">{{ c.type }}</code></td>
-          <td>
-            <v-chip
-              :color="conditionColor(c.status)"
-              size="x-small"
-              variant="tonal"
-              :prepend-icon="conditionIcon(c.status)"
-            >{{ c.status }}</v-chip>
-          </td>
-          <td class="text-caption">{{ c.reason || '—' }}</td>
-          <td class="text-caption text-medium-emphasis" style="max-width:320px; white-space:normal; word-break:break-word">
-            {{ c.message || '—' }}
-          </td>
-          <td class="text-caption text-medium-emphasis" :title="c.lastTransitionTime">
-            {{ relativeTime(c.lastTransitionTime) }}
-          </td>
-        </tr>
-      </tbody>
-    </v-table>
+
+    <!-- Expanded table -->
+    <v-expand-transition>
+      <div v-if="expanded && conditions.length > 0">
+        <v-table density="compact" class="rounded">
+          <thead>
+            <tr>
+              <th class="text-caption">Type</th>
+              <th class="text-caption">Status</th>
+              <th class="text-caption">Reason</th>
+              <th class="text-caption">Message</th>
+              <th class="text-caption">Since</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in conditions" :key="c.type">
+              <td class="text-caption font-weight-medium">{{ c.type }}</td>
+              <td>
+                <v-chip :color="statusColor(c.status)" size="x-small" variant="tonal">
+                  {{ c.status }}
+                </v-chip>
+              </td>
+              <td class="text-caption">{{ c.reason || '—' }}</td>
+              <td class="text-caption" style="max-width: 300px; word-break: break-word;">
+                {{ c.message || '—' }}
+              </td>
+              <td class="text-caption text-no-wrap">
+                <span v-if="c.lastTransitionTime" :title="absoluteTime(c.lastTransitionTime)">
+                  {{ relativeTime(c.lastTransitionTime) }}
+                </span>
+                <span v-else class="text-medium-emphasis">—</span>
+              </td>
+            </tr>
+          </tbody>
+        </v-table>
+      </div>
+    </v-expand-transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { relativeTime } from '@/composables/useTime'
+import { ref, computed } from 'vue'
+import { relativeTime, absoluteTime } from '@/composables/useTime'
 
 export interface Condition {
   type: string
@@ -48,19 +76,42 @@ export interface Condition {
   lastTransitionTime: string
 }
 
-defineProps<{
+const props = defineProps<{
   conditions?: Condition[]
+  loading?: boolean
 }>()
 
-function conditionColor(status: string): string {
+const expanded = ref(false)
+const conditions = computed(() => props.conditions ?? [])
+
+function statusColor(status: string): string {
   if (status === 'True') return 'success'
   if (status === 'False') return 'error'
   return 'warning'
 }
 
-function conditionIcon(status: string): string {
-  if (status === 'True') return 'mdi-check-circle-outline'
-  if (status === 'False') return 'mdi-alert-circle-outline'
-  return 'mdi-help-circle-outline'
-}
+const issueCount = computed(() =>
+  conditions.value.filter(c => c.status === 'False').length
+)
+const unknownCount = computed(() =>
+  conditions.value.filter(c => c.status === 'Unknown').length
+)
+
+const summaryColor = computed(() => {
+  if (issueCount.value > 0) return 'error'
+  if (unknownCount.value > 0) return 'warning'
+  return 'success'
+})
+
+const summaryIcon = computed(() => {
+  if (issueCount.value > 0) return 'mdi-alert-circle'
+  if (unknownCount.value > 0) return 'mdi-help-circle'
+  return 'mdi-check-circle'
+})
+
+const summaryLabel = computed(() => {
+  if (issueCount.value > 0) return `${issueCount.value} Issue${issueCount.value > 1 ? 's' : ''}`
+  if (unknownCount.value > 0) return 'Unknown'
+  return 'All Healthy'
+})
 </script>

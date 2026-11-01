@@ -129,6 +129,7 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dyna
 		r.Get("/{name}", mh.Get)
 		r.Delete("/{name}", mh.Delete)
 		r.Patch("/{name}/power", mh.PatchPower)
+		r.Get("/{name}/yaml", mh.GetRaw)
 	})
 
 	// Volume routes
@@ -140,6 +141,7 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dyna
 		r.Post("/", vh.Create)
 		r.Get("/{name}", vh.Get)
 		r.Delete("/{name}", vh.Delete)
+		r.Get("/{name}/yaml", vh.GetRaw)
 	})
 
 	// Networking routes
@@ -151,6 +153,7 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dyna
 		r.Post("/", nh.CreateNetwork)
 		r.Get("/{name}", nh.GetNetwork)
 		r.Delete("/{name}", nh.DeleteNetwork)
+		r.Get("/{name}/yaml", nh.GetNetworkRaw)
 	})
 	r.Get("/api/v1/namespaces/{ns}/networkinterfaces", nh.ListNetworkInterfaces)
 	r.Route("/api/v1/namespaces/{ns}/virtualips", func(r chi.Router) {
