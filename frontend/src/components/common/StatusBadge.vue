@@ -21,9 +21,11 @@ const props = defineProps<{ state: string }>()
 
 const chipColor = computed(() => {
   const s = (props.state || '').toLowerCase()
-  if (s === 'running' || s === 'ready' || s === 'available' || s === 'bound' || s === 'allocated' || s === 'on' || s === 'active') return 'success'
+  if (s === 'running' || s === 'ready' || s === 'available' || s === 'allocated' || s === 'on' || s === 'active') return 'success'
+  if (s === 'bound') return 'success'
   if (s === 'pending' || s === 'powering on' || s === 'poweringon') return 'warning'
   if (s === 'error' || s === 'failed' || s === 'unreachable') return 'error'
+  if (s === 'terminating') return 'warning'
   if (s === 'off' || s === 'terminated' || s === 'poweringoff' || s === 'powering off') return 'default'
   if (s === 'paused') return 'info'
   return 'secondary'
@@ -31,9 +33,10 @@ const chipColor = computed(() => {
 
 const chipIcon = computed(() => {
   const s = (props.state || '').toLowerCase()
-  if (s === 'running' || s === 'ready' || s === 'available' || s === 'on' || s === 'active') return 'mdi-check-circle-outline'
+  if (s === 'running' || s === 'ready' || s === 'available' || s === 'on' || s === 'active' || s === 'bound') return 'mdi-check-circle-outline'
   if (s === 'pending' || s === 'poweringon') return 'mdi-clock-outline'
-  if (s === 'error' || s === 'failed') return 'mdi-alert-circle-outline'
+  if (s === 'terminating') return 'mdi-delete-clock'
+  if (s === 'error' || s === 'failed') return 'mdi-alert-circle'
   if (s === 'off' || s === 'terminated') return 'mdi-circle-off-outline'
   if (s === 'paused') return 'mdi-pause-circle-outline'
   return 'mdi-circle-outline'

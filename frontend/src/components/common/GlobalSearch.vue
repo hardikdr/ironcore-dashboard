@@ -20,8 +20,32 @@
 
         <v-divider />
 
-        <div v-if="query.length < 2" class="px-4 py-6 text-center text-medium-emphasis text-body-2">
-          Type at least 2 characters to search
+        <!-- Empty state: recent searches or hint -->
+        <div v-if="query.length < 2">
+          <div v-if="recentSearches.length > 0" class="px-4 pt-3 pb-1">
+            <div class="text-caption text-medium-emphasis mb-2 d-flex align-center justify-space-between">
+              <span>Recent searches</span>
+              <v-btn size="x-small" variant="text" @click="clearRecent">Clear</v-btn>
+            </div>
+            <v-list density="compact" class="py-0">
+              <v-list-item
+                v-for="s in recentSearches"
+                :key="s"
+                rounded="lg"
+                class="mx-0 mb-1"
+                @click="query = s"
+              >
+                <template #prepend>
+                  <v-icon size="16" color="medium-emphasis">mdi-history</v-icon>
+                </template>
+                <v-list-item-title class="text-body-2">{{ s }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </div>
+          <div v-else class="px-4 py-6 text-center text-medium-emphasis text-body-2">
+            <div class="mb-1">Search machines, volumes, networks&hellip;</div>
+            <div class="text-caption">Type to search · <v-kbd>↑↓</v-kbd> navigate · <v-kbd>Enter</v-kbd> open</div>
+          </div>
         </div>
 
         <v-list v-else-if="results.length > 0" density="compact" class="py-2">
@@ -31,7 +55,7 @@
             :to="r.path"
             rounded="lg"
             class="mx-2 mb-1"
-            @click="open = false"
+            @click="selectResult(r)"
           >
             <template #prepend>
               <v-icon :color="r.color" size="20">{{ r.icon }}</v-icon>
@@ -73,6 +97,40 @@ import StatusBadge from '@/components/common/StatusBadge.vue'
 const open  = defineModel<boolean>({ default: false })
 const query = ref('')
 const vuetifyTheme = useTheme()
+
+const RECENT_KEY = 'ironcore-search-history'
+const MAX_RECENT = 5
+
+const recentSearches = ref<string[]>([])
+
+function loadRecent() {
+  try {
+    recentSearches.value = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]')
+  } catch {
+    recentSearches.value = []
+  }
+}
+
+function saveRecent(term: string) {
+  const trimmed = term.trim()
+  if (!trimmed) return
+  const list = recentSearches.value.filter(s => s !== trimmed)
+  list.unshift(trimmed)
+  recentSearches.value = list.slice(0, MAX_RECENT)
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recentSearches.value))
+  } catch { /* ignore */ }
+}
+
+function clearRecent() {
+  recentSearches.value = []
+  try { localStorage.removeItem(RECENT_KEY) } catch { /* ignore */ }
+}
+
+function selectResult(_r: SearchResult) {
+  saveRecent(query.value.trim())
+  open.value = false
+}
 
 const isDark = computed(() => vuetifyTheme.global.current.value.dark)
 const cardStyle = computed(() => isDark.value
@@ -154,6 +212,9 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => document.addEventListener('keydown', onKeydown))
+onMounted(() => {
+  document.addEventListener('keydown', onKeydown)
+  loadRecent()
+})
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 </script>

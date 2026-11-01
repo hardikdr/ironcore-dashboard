@@ -3,9 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"io/fs"
-	"net"
 	"net/http"
 	"strings"
 
@@ -245,7 +243,7 @@ func mountFrontend(r *chi.Mux, frontendFS fs.FS) {
 
 func (s *Server) handleMachineConsole(w http.ResponseWriter, r *http.Request) {
 	ns := chi.URLParam(r, "ns")
-	name := chi.URLParam(r, "name")
+	_ = ns // validated by chi; reserved for future machines/exec subresource proxy
 
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		InsecureSkipVerify: true,
@@ -257,78 +255,24 @@ func (s *Server) handleMachineConsole(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	banner := "\r\n\033[1;32mIronCore Machine Console — " + name + " (" + ns + ")\033[0m\r\n\033[90mConnecting...\033[0m\r\n"
-	conn.Write(ctx, websocket.MessageText, []byte(banner))
-
-	// Try to get machine IPs via NIC objects and SSH passthrough
-	machine, err := s.ironcore.ComputeV1alpha1().Machines(ns).Get(ctx, name, metav1.GetOptions{})
-	if err == nil {
-		for _, niStatus := range machine.Status.NetworkInterfaces {
-			if niStatus.NetworkInterfaceRef.Name == "" {
-				continue
-			}
-			nic, nicErr := s.ironcore.NetworkingV1alpha1().NetworkInterfaces(ns).Get(ctx, niStatus.NetworkInterfaceRef.Name, metav1.GetOptions{})
-			if nicErr != nil {
-				continue
-			}
-			for _, ipAddr := range nic.Status.IPs {
-				ip := ipAddr.String()
-				tcpConn, dialErr := net.DialTimeout("tcp", ip+":22", 3_000_000_000)
-				if dialErr == nil {
-					conn.Write(ctx, websocket.MessageText, []byte("\033[32mSSH passthrough to "+ip+":22\033[0m\r\n"))
-					go func() {
-						for {
-							_, msg, readErr := conn.Read(ctx)
-							if readErr != nil {
-								return
-							}
-							tcpConn.Write(msg)
-						}
-					}()
-					io.Copy(&wsWriter{conn: conn, ctx: ctx}, tcpConn)
-					return
-				}
-			}
-		}
+	// Real-mode console is not yet implemented. The IronCore machines/exec
+	// subresource provides the correct exec proxy path, but wiring it requires
+	// OIDC token forwarding (Phase 6). Sending raw TCP to port 22 would
+	// transmit SSH protocol bytes directly to the xterm.js client, which
+	// cannot interpret them — so we return an explicit error instead.
+	msg := struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	}{
+		Type: "error",
+		Message: "Console is not available in real mode. " +
+			"Interactive access requires the IronCore machines/exec subresource, " +
+			"which will be enabled once OIDC token forwarding is configured (Phase 6).",
 	}
-
-	// Simulated shell fallback
-	conn.Write(ctx, websocket.MessageText, []byte("\033[33mNo reachable console endpoint. Running simulated shell.\033[0m\r\n\r\n\033[1m"+name+":~$\033[0m "))
-	for {
-		_, msg, readErr := conn.Read(ctx)
-		if readErr != nil {
-			return
-		}
-
-		var frame struct {
-			Type string `json:"type"`
-		}
-		if json.Unmarshal(msg, &frame) == nil && frame.Type == "resize" {
-			continue
-		}
-
-		line := string(msg)
-		if line == "exit\r" || line == "exit\n" || line == "exit" {
-			conn.Write(ctx, websocket.MessageText, []byte("\r\nlogout\r\n"))
-			conn.Close(websocket.StatusNormalClosure, "logout")
-			return
-		}
-		response := "\r\n\033[33mbash: " + line + ": command not found\033[0m\r\n\033[1m" + name + ":~$\033[0m "
-		conn.Write(ctx, websocket.MessageText, []byte(response))
+	if data, encErr := json.Marshal(msg); encErr == nil {
+		conn.Write(ctx, websocket.MessageText, data)
 	}
-}
-
-type wsWriter struct {
-	conn *websocket.Conn
-	ctx  context.Context
-}
-
-func (w *wsWriter) Write(p []byte) (int, error) {
-	err := w.conn.Write(w.ctx, websocket.MessageBinary, p)
-	if err != nil {
-		return 0, err
-	}
-	return len(p), nil
+	conn.Close(websocket.StatusNormalClosure, "console unavailable")
 }
 
 func (s *Server) Router() *chi.Mux { return s.router }

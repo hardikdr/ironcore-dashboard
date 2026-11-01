@@ -24,6 +24,7 @@ export default createVuetify({
           background:            '#f1f5f9',
           surface:               '#ffffff',
           'surface-variant':     '#f8fafc',
+          'surface-raised':      '#f8fafc',
           'on-surface-variant':  '#64748b',
         }
       },
@@ -41,7 +42,9 @@ export default createVuetify({
           background:            '#070b14',
           surface:               '#0d1526',
           'surface-variant':     '#141e33',
+          'surface-raised':      '#1a2540',
           'on-surface-variant':  '#94a3b8',
+          'border-color':        '#1e2d4a',
         }
       }
     }
