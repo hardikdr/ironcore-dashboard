@@ -127,8 +127,8 @@
             @click="refreshAll"
           />
 
-          <!-- User avatar — flex-shrink:0 + explicit margin ensures it never gets clipped -->
-          <v-avatar color="primary" size="30" style="cursor:pointer; flex-shrink:0; margin-right:0;">
+          <!-- User avatar — hidden on xs to preserve space for namespace+demo chips -->
+          <v-avatar v-if="!xs" color="primary" size="30" style="cursor:pointer; flex-shrink:0;">
             <span class="text-caption font-weight-bold">IC</span>
           </v-avatar>
         </div>
