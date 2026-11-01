@@ -102,8 +102,36 @@
       </v-col>
 
       <v-col cols="12" md="4">
+        <!-- Health Summary — actionable operator-relevant alerts -->
         <v-card :style="cardStyle" class="pa-4">
-          <div class="text-subtitle-2 font-weight-bold mb-4 d-flex align-center ga-2">
+          <div class="text-subtitle-2 font-weight-bold mb-3 d-flex align-center ga-2">
+            <v-icon size="16" :color="healthColor">mdi-shield-check-outline</v-icon>
+            Fleet Health
+          </div>
+          <div v-if="healthAlerts.length === 0" class="d-flex align-center ga-2 text-caption" style="color:#34d399">
+            <v-icon size="16" color="success">mdi-check-circle-outline</v-icon>
+            All systems operational
+          </div>
+          <div v-else class="d-flex flex-column ga-2">
+            <div
+              v-for="alert in healthAlerts"
+              :key="alert.label"
+              class="d-flex align-center justify-space-between"
+            >
+              <div class="d-flex align-center ga-2">
+                <v-icon size="14" :color="alert.color">{{ alert.icon }}</v-icon>
+                <span class="text-caption">{{ alert.label }}</span>
+              </div>
+              <router-link :to="alert.link" class="text-caption text-decoration-none" style="color:inherit; opacity:0.7;">
+                View →
+              </router-link>
+            </div>
+          </div>
+        </v-card>
+
+        <!-- Quick create -->
+        <v-card :style="cardStyle" class="pa-4 mt-4">
+          <div class="text-subtitle-2 font-weight-bold mb-3 d-flex align-center ga-2">
             <v-icon size="16" color="primary">mdi-lightning-bolt</v-icon>
             Quick Actions
           </div>
@@ -116,6 +144,7 @@
               :color="action.color"
               variant="tonal"
               class="justify-start"
+              size="small"
               rounded="lg"
             >
               {{ action.label }}
@@ -240,6 +269,39 @@ function typeColor(type: string) {
   const m: Record<string, string> = { Machine: 'primary', Volume: 'info', Network: 'accent' }
   return m[type] ?? 'secondary'
 }
+
+// ── Fleet health alerts ────────────────────────────────────────────
+const healthAlerts = computed(() => {
+  const alerts: { label: string; icon: string; color: string; link: string }[] = []
+  const pendingMachines = machinesStore.items.filter(m => m.state?.toLowerCase() === 'pending').length
+  const errorMachines   = machinesStore.items.filter(m => m.state?.toLowerCase() === 'error').length
+  const errorVolumes    = volumesStore.items.filter(v => v.state?.toLowerCase() === 'error').length
+  const pendingVolumes  = volumesStore.items.filter(v => v.state?.toLowerCase() === 'pending').length
+
+  if (errorMachines > 0) alerts.push({
+    label: `${errorMachines} machine${errorMachines > 1 ? 's' : ''} in error`,
+    icon: 'mdi-alert-circle', color: 'error', link: '/machines'
+  })
+  if (pendingMachines > 0) alerts.push({
+    label: `${pendingMachines} machine${pendingMachines > 1 ? 's' : ''} pending`,
+    icon: 'mdi-clock-outline', color: 'warning', link: '/machines'
+  })
+  if (errorVolumes > 0) alerts.push({
+    label: `${errorVolumes} volume${errorVolumes > 1 ? 's' : ''} in error`,
+    icon: 'mdi-database-alert', color: 'error', link: '/volumes'
+  })
+  if (pendingVolumes > 0) alerts.push({
+    label: `${pendingVolumes} volume${pendingVolumes > 1 ? 's' : ''} pending`,
+    icon: 'mdi-clock-outline', color: 'warning', link: '/volumes'
+  })
+  return alerts
+})
+
+const healthColor = computed(() => {
+  const hasError = healthAlerts.value.some(a => a.color === 'error')
+  const hasWarning = healthAlerts.value.some(a => a.color === 'warning')
+  return hasError ? 'error' : hasWarning ? 'warning' : 'success'
+})
 
 // ── Quick actions ──────────────────────────────────────────────────
 const quickActions = [

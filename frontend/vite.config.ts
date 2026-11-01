@@ -22,7 +22,15 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../dist/frontend'
+    outDir: '../dist/frontend',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-vue': ['vue', 'vue-router', 'pinia'],
+          'vendor-vuetify': ['vuetify'],
+        },
+      },
+    },
   }
 })
 
