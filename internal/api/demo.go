@@ -121,6 +121,14 @@ var demoFixtures = map[string]any{
 	"bucketpools": []BucketPoolResponse{
 		{Name: "bucket-pool-eu", State: "Available", AvailableBucketClasses: []string{"standard-s3", "fast-s3"}, CreatedAt: demoNow2d},
 	},
+
+	"events": []EventResponse{
+		{Namespace: "default", Name: "web-frontend-01.17a1b", Reason: "Starting", Message: "Starting container runtime", Type: "Normal", Count: 1, FirstTime: demoNow2d, LastTime: demoNow2d, Regarding: "web-frontend-01", RegardsKind: "Machine"},
+		{Namespace: "default", Name: "web-frontend-01.17a2c", Reason: "Started", Message: "Machine started successfully", Type: "Normal", Count: 1, FirstTime: demoNow2d, LastTime: demoNow2d, Regarding: "web-frontend-01", RegardsKind: "Machine"},
+		{Namespace: "default", Name: "api-server-01.18a3d", Reason: "Provisioning", Message: "Waiting for volume attachment", Type: "Normal", Count: 3, FirstTime: demoNow1d, LastTime: demoNow1h, Regarding: "api-server-01", RegardsKind: "Machine"},
+		{Namespace: "default", Name: "data-01.19a1e", Reason: "Bound", Message: "Volume bound to node", Type: "Normal", Count: 1, FirstTime: demoNow2d, LastTime: demoNow2d, Regarding: "data-01", RegardsKind: "Volume"},
+		{Namespace: "default", Name: "worker-batch-01.1aa2f", Reason: "FailedScheduling", Message: "0/2 nodes are available: insufficient CPU", Type: "Warning", Count: 5, FirstTime: demoNow1h, LastTime: demoNow, Regarding: "worker-batch-01", RegardsKind: "Machine"},
+	},
 }
 
 // MachineClassResponse is here since it's not in types.go yet.
@@ -288,6 +296,21 @@ func (d *DemoHandler) handleResource(w http.ResponseWriter, r *http.Request, res
 		writeJSON(w, http.StatusOK, demoFixtures["networkpolicies"])
 	case "buckets":
 		writeJSON(w, http.StatusOK, demoFixtures["buckets"])
+	case "events":
+		regarding := r.URL.Query().Get("regarding")
+		kind := r.URL.Query().Get("kind")
+		all := demoFixtures["events"].([]EventResponse)
+		filtered := make([]EventResponse, 0, len(all))
+		for _, ev := range all {
+			if regarding != "" && ev.Regarding != regarding {
+				continue
+			}
+			if kind != "" && ev.RegardsKind != kind {
+				continue
+			}
+			filtered = append(filtered, ev)
+		}
+		writeJSON(w, http.StatusOK, filtered)
 	case "virtualips":
 		list := demoFixtures["virtualips"].([]VirtualIPResponse)
 		if name == "" {

@@ -62,6 +62,9 @@
         <v-tab value="storage">
           <v-icon size="16" class="mr-1">mdi-database-outline</v-icon>Storage
         </v-tab>
+        <v-tab value="events">
+          <v-icon size="16" class="mr-1">mdi-clock-outline</v-icon>Events
+        </v-tab>
       </v-tabs>
 
       <v-window v-model="tab">
@@ -228,6 +231,13 @@
             </v-table>
           </v-card>
         </v-window-item>
+
+        <!-- ── Events ───────────────────────────────────────── -->
+        <v-window-item value="events">
+          <v-card :style="cardStyle" variant="flat" class="pa-4">
+            <ResourceEvents :resource-name="machineName" resource-kind="Machine" />
+          </v-card>
+        </v-window-item>
       </v-window>
     </template>
   </v-container>
@@ -241,9 +251,10 @@ import { useNamespaceStore } from '@/stores/namespace'
 import { useMachinesStore } from '@/stores/machines'
 import { useCardStyle } from '@/composables/useCardStyle'
 import { relativeTime, absoluteTime } from '@/composables/useTime'
-import PageHeader   from '@/components/common/PageHeader.vue'
-import StatusBadge  from '@/components/common/StatusBadge.vue'
-import CopyChip     from '@/components/common/CopyChip.vue'
+import PageHeader      from '@/components/common/PageHeader.vue'
+import StatusBadge     from '@/components/common/StatusBadge.vue'
+import CopyChip        from '@/components/common/CopyChip.vue'
+import ResourceEvents  from '@/components/common/ResourceEvents.vue'
 
 // Dynamic import — xterm.js only loads when this component renders
 const MachineTerminal = defineAsyncComponent(

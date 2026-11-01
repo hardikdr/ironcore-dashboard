@@ -98,6 +98,15 @@ export const api = {
   resourceQuotas: {
     list: (ns: string) => request<ResourceQuota[]>(`/namespaces/${ns}/resourcequotas`)
   },
+  events: {
+    list: (ns: string, regarding?: string, kind?: string) => {
+      const params = new URLSearchParams()
+      if (regarding) params.set('regarding', regarding)
+      if (kind) params.set('kind', kind)
+      const qs = params.toString() ? `?${params.toString()}` : ''
+      return request<ResourceEvent[]>(`/namespaces/${ns}/events${qs}`)
+    }
+  },
   // Phase 4 endpoints
   networkPolicies: {
     list: (ns: string) => request<NetworkPolicy[]>(`/namespaces/${ns}/networkpolicies`),
@@ -222,6 +231,12 @@ export interface PrefixAllocation {
 export interface ResourceQuota {
   name: string; namespace: string
   hard: Record<string, string>; used: Record<string, string>; createdAt: string
+}
+
+export interface ResourceEvent {
+  namespace: string; name: string; reason: string; message: string
+  type: string; count: number; firstTime: string; lastTime: string
+  regarding: string; regardsKind: string
 }
 
 // Phase 4 types

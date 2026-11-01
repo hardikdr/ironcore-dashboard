@@ -89,6 +89,11 @@
       </v-col>
     </v-row>
 
+    <!-- Events section -->
+    <v-card v-if="detail" :style="cardStyle" variant="flat" rounded="lg" class="pa-4 mt-4">
+      <ResourceEvents :resource-name="name" resource-kind="Volume" />
+    </v-card>
+
     <v-dialog v-model="deleteDialog" max-width="420" :scrim="true">
       <v-card>
         <v-card-title class="d-flex align-center ga-2">
@@ -116,9 +121,10 @@ import { api, type VolumeDetail } from '@/api/client'
 import { useNamespaceStore } from '@/stores/namespace'
 import { useCardStyle } from '@/composables/useCardStyle'
 import { relativeTime, absoluteTime } from '@/composables/useTime'
-import PageHeader  from '@/components/common/PageHeader.vue'
-import StatusBadge from '@/components/common/StatusBadge.vue'
-import CopyChip    from '@/components/common/CopyChip.vue'
+import PageHeader      from '@/components/common/PageHeader.vue'
+import StatusBadge     from '@/components/common/StatusBadge.vue'
+import CopyChip        from '@/components/common/CopyChip.vue'
+import ResourceEvents  from '@/components/common/ResourceEvents.vue'
 
 const route   = useRoute()
 const router  = useRouter()
