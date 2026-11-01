@@ -65,6 +65,9 @@
         <v-tab value="events">
           <v-icon size="16" class="mr-1">mdi-clock-outline</v-icon>Events
         </v-tab>
+        <v-tab value="yaml">
+          <v-icon size="16" class="mr-1">mdi-code-braces</v-icon>YAML
+        </v-tab>
       </v-tabs>
 
       <v-window v-model="tab">
@@ -238,6 +241,11 @@
             <ResourceEvents :resource-name="machineName" resource-kind="Machine" />
           </v-card>
         </v-window-item>
+
+        <!-- ── YAML ─────────────────────────────────────────── -->
+        <v-window-item value="yaml">
+          <ResourceYaml v-if="machine" :resource="machine as Record<string, unknown>" :filename="machineName" />
+        </v-window-item>
       </v-window>
     </template>
   </v-container>
@@ -255,6 +263,7 @@ import PageHeader      from '@/components/common/PageHeader.vue'
 import StatusBadge     from '@/components/common/StatusBadge.vue'
 import CopyChip        from '@/components/common/CopyChip.vue'
 import ResourceEvents  from '@/components/common/ResourceEvents.vue'
+import ResourceYaml    from '@/components/common/ResourceYaml.vue'
 
 // Dynamic import — xterm.js only loads when this component renders
 const MachineTerminal = defineAsyncComponent(

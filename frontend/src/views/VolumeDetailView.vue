@@ -94,6 +94,11 @@
       <ResourceEvents :resource-name="name" resource-kind="Volume" />
     </v-card>
 
+    <!-- YAML section -->
+    <div v-if="detail" class="mt-4">
+      <ResourceYaml :resource="detail as Record<string, unknown>" :filename="name" />
+    </div>
+
     <v-dialog v-model="deleteDialog" max-width="420" :scrim="true">
       <v-card>
         <v-card-title class="d-flex align-center ga-2">
@@ -125,6 +130,7 @@ import PageHeader      from '@/components/common/PageHeader.vue'
 import StatusBadge     from '@/components/common/StatusBadge.vue'
 import CopyChip        from '@/components/common/CopyChip.vue'
 import ResourceEvents  from '@/components/common/ResourceEvents.vue'
+import ResourceYaml    from '@/components/common/ResourceYaml.vue'
 
 const route   = useRoute()
 const router  = useRouter()
