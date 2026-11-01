@@ -3,7 +3,7 @@
 > Estimated time: 7–10 minutes  
 > Mode: Demo server (`make demo` or `./bin/ironcore-dashboard --demo --addr :8181`)  
 > URL: http://localhost:8181  
-> Last verified: 2026-11-01 (Phase 4, commit on `worktree-production-console`)
+> Last verified: 2026-11-01 (Phase 5, branch `worktree-production-console`)
 
 ---
 
@@ -145,7 +145,29 @@ Navigate to **Resource Quotas**:
 
 ---
 
-### 7:00 — Responsive & Accessibility (optional 1 min)
+### 7:00 — Phase 5 Features (1 min)
+
+**Status Conditions** (click any machine → Conditions tab):
+- Summary chip: "All Healthy" (green), "N Issues" (red), "Unknown" (amber).
+- Click to expand table: type, status badge, reason, message, since.
+- Click a volume → scroll down to "Status Conditions" card.
+
+**YAML View** (click any machine → YAML tab):
+- Full resource serialized as YAML, scrollable.
+- "Copy" button copies to clipboard. "Download" saves `<name>.yaml`.
+- Cross-resource link: Volume detail shows "Attached to: web-frontend-01" linking to machine.
+
+**Fleet Health** (back to Overview):
+- Fleet Health card shows pending/error counts with direct links to filtered lists.
+- Green chip = all healthy; amber = warnings; red = errors.
+
+**Demo Mode Indicator:**
+- Top bar always shows DEMO chip — no confusion about production vs. demo.
+- Settings → Authentication: paste a bearer token for real-cluster use.
+
+---
+
+### 8:00 — Responsive & Accessibility (optional 1 min)
 
 In Chrome DevTools, switch to **iPhone 14** device emulation (390×844):
 - Drawer is closed — no content obscured.
@@ -182,10 +204,11 @@ In Chrome DevTools, switch to **iPhone 14** device emulation (390×844):
 | Bucket, BucketClass, BucketPool | ✅ Real |
 | ResourceQuota, PrefixAllocation | ✅ Real |
 | Server (metal-operator) | ✅ Real (dynamic k8s client) |
-| Kubernetes Events on detail pages | ❌ Not yet implemented (P1 gap) |
-| Status conditions on detail pages | ❌ Not yet implemented |
-| Authentication (OIDC/bearer token) | ❌ Not implemented — uses server SA |
-| Tenant isolation (SAR) | ❌ Not implemented |
+| Kubernetes Events on detail pages | ✅ Shipped Phase 5 |
+| Status conditions on detail pages | ✅ Shipped Phase 5 |
+| Raw YAML view on detail pages | ✅ Shipped Phase 5 |
+| Authentication (bearer token) | ✅ Frontend injects; backend middleware reads. Full impersonation is Phase 6. |
+| Namespace RBAC (SAR) | ✅ SelfSubjectAccessReview before namespace switch (Phase 5) |
 
 ---
 

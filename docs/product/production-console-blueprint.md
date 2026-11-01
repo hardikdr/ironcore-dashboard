@@ -210,10 +210,15 @@ Tested at 390px, 768px, and 1440px in both light and dark themes. All 20 Playwri
 - The smoke test suite (`make smoke-test`) always uses demo mode.
 - Demo server banner displayed prominently in future iteration.
 
-### 6.3 Production deployment requirements (not yet implemented)
-1. **Authentication**: OIDC/Bearer token forwarding from frontend `Authorization: Bearer <token>` to backend, which then passes it to the Kubernetes API.
-2. **Authorization**: Backend runs all Kubernetes calls with the user's token — never the service account token. This prevents cross-tenant data leakage.
-3. **Namespace scoping**: Validate namespace access with `SubjectAccessReview` before switching.
+### 6.3 Production deployment requirements
+
+Shipped in Phase 5:
+1. **Authentication**: Bearer token forwarding — frontend stores token in localStorage, injects `Authorization: Bearer <token>` on every request. Backend middleware reads and propagates the token. Token is never logged.
+2. **Namespace RBAC check**: `SelfSubjectAccessReview` is called before namespace switch; frontend shows error toast if access is denied.
+
+Still required for full production:
+- User impersonation: pass the user's token through to Kubernetes API calls rather than the server service account.
+- OIDC integration: exchange OIDC tokens with the Kubernetes API server.
 
 ---
 
@@ -224,8 +229,11 @@ Tested at 390px, 768px, and 1440px in both light and dark themes. All 20 Playwri
 | All resource lists | ✅ Fixture data | ✅ From real Kubernetes API |
 | Namespace switcher values | 4 hardcoded | From k8s CoreV1().Namespaces() |
 | Machine console (WebSocket) | Simulated shell (`$PS1` prompt) | SSH passthrough via NIC IP |
-| Events / audit log | Not shown | From k8s Events API (P1 gap) |
-| Status conditions | Not shown | From resource .Status.Conditions |
+| Events / audit log | Demo fixtures | From k8s Events API (shipped Phase 5) |
+| Status conditions | Demo fixtures | From resource .Status.Conditions (shipped Phase 5) |
+| Raw YAML view | ✅ Frontend serialization | ✅ From raw k8s JSON (shipped Phase 5) |
+| Bearer token forwarding | N/A (demo always allowed) | ✅ localStorage → Authorization header (Phase 5) |
+| Namespace RBAC | Always allowed | SelfSubjectAccessReview (Phase 5) |
 | Buckets (Phase 4) | Demo fixtures | From StorageV1alpha1().Buckets() |
 | NetworkPolicies (Phase 4) | Demo fixtures | From NetworkingV1alpha1().NetworkPolicies() |
 
@@ -247,21 +255,30 @@ Tested at 390px, 768px, and 1440px in both light and dark themes. All 20 Playwri
 - All six backed by real IronCore client-go handlers
 - Demo fixtures for all six
 
-### Phase 4 — Responsive + extended resources (in progress)
+### Phase 4 — Responsive + extended resources ✅
 - ✅ Responsive layout: mobile drawer, compact top bar, no horizontal overflow
-- ✅ Expanded smoke tests: 20 tests (vs 6 in Phase 3), responsive at 390/768/1440
+- ✅ Expanded smoke tests: 25 tests, responsive at 390/768/1440
 - ✅ Phase 4 resources: NetworkInterface list, NetworkPolicy list, Bucket+BucketClass+BucketPool
-- 🔄 Events endpoint: real Kubernetes Events per resource (next milestone)
-- 🔄 Status conditions: display conditions from resource status on detail pages
+- ✅ Events endpoint: real Kubernetes Events per resource (Kubernetes Events API)
 
-### Phase 5 — Production hardening (planned)
-- OIDC authentication, per-request bearer token forwarding
-- SubjectAccessReview namespace validation
-- Status conditions on all detail views
-- Kubernetes Events panel on all detail views
+### Phase 5 — Production hardening ✅
+- ✅ Bearer token forwarding: localStorage → Authorization header → backend middleware
+- ✅ Namespace RBAC: SelfSubjectAccessReview before namespace switch
+- ✅ Status conditions: collapsible Conditions tab on Machine, Volume, Network detail views
+- ✅ Raw YAML view: Conditions/YAML tabs on all detail views; backend GetRaw endpoints
+- ✅ Fleet health summary: Overview shows pending/error counts with links
+- ✅ Code splitting: Vite manualChunks — vendor-vue, vendor-vuetify; main bundle 520KB gzip
+- ✅ Unit tests: Go unit tests for demo handler and server routing
+- ✅ Cross-resource navigation: Volume → Machine link ("Attached to"), NIC → Network → Machine
+- ✅ Demo mode indicator: DEMO chip always visible in top bar
+
+### Phase 6 — Remaining production gaps (future)
+- User impersonation: pass bearer token to Kubernetes API calls
+- OIDC token exchange
 - Server-side pagination with label selectors
-- Raw YAML view via `kubectl.io/v1` or direct API
+- Bulk operations with confirmation dialogs
+- Rate limiting and request deduplication
 
 ---
 
-_Blueprint authored by Claude Code (Phase 1) and updated through Phase 4 automation. Update as capabilities land._
+_Blueprint authored by Claude Code (Phase 1) and updated through Phase 5 automation._
