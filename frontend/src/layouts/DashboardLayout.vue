@@ -179,6 +179,7 @@
         </NavGroup>
 
         <NavGroup label="Operations" :rail="rail && !mobile" storage-key="operations" :default-open="true">
+          <NavItem to="/operations"    icon="mdi-clipboard-list-outline" label="Events"          :rail="rail && !mobile" @click="onNavClick" />
           <NavItem to="/servers"        icon="mdi-server-security"   label="Servers"         :rail="rail && !mobile" @click="onNavClick" />
           <NavItem to="/resourcequotas" icon="mdi-gauge"             label="Resource Quotas" :rail="rail && !mobile" @click="onNavClick" />
         </NavGroup>

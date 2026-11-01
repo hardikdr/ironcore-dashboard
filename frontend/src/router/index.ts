@@ -43,6 +43,8 @@ const router = createRouter({
         { path: 'bucketclasses',       component: () => import('@/views/BucketClassesView.vue') },
         { path: 'bucketpools',         component: () => import('@/views/BucketPoolsView.vue') },
         { path: 'settings',            component: () => import('@/views/SettingsView.vue') },
+        // Operations view — events across resource types
+        { path: 'operations',          component: () => import('@/views/OperationsView.vue') },
         { path: ':pathMatch(.*)*',     component: () => import('@/views/NotFoundView.vue') },
       ]
     }
