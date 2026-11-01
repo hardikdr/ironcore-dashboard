@@ -1,79 +1,126 @@
 <template>
   <v-container fluid class="pa-6">
-    <PageHeader
-      title="Networking"
-      subtitle="Networks and network interfaces"
-      icon="mdi-lan"
-    >
+    <PageHeader title="Networking" subtitle="Networks and network interfaces" icon="mdi-lan">
       <template #actions>
+        <v-btn variant="outlined" prepend-icon="mdi-refresh" :loading="store.loading" @click="load()">Refresh</v-btn>
         <v-btn color="primary" prepend-icon="mdi-plus" :to="{ path: '/networks/new' }">Create Network</v-btn>
       </template>
     </PageHeader>
 
-    <v-row dense class="mb-6">
-      <v-col cols="auto"><StatCard label="Available" :value="availableCount" icon="mdi-check-circle-outline" color="success" /></v-col>
-      <v-col cols="auto"><StatCard label="Pending"   :value="pendingCount"   icon="mdi-clock-outline"        color="warning" /></v-col>
-      <v-col cols="auto"><StatCard label="Total"     :value="networks.length" icon="mdi-lan"                 color="primary" /></v-col>
-    </v-row>
+    <template v-if="store.loading && store.items.length === 0">
+      <v-skeleton-loader type="table-row@6" />
+    </template>
 
-    <v-card v-if="networks.length === 0 && !loading" :style="cardStyle" variant="flat" rounded="lg" class="mb-6">
-      <v-card-text class="text-center pa-12">
-        <v-icon size="48" color="medium-emphasis" class="mb-4">mdi-lan-disconnect</v-icon>
-        <div class="text-h6 mb-2">No networks yet</div>
-        <div class="text-medium-emphasis mb-4">Create your first network to get started.</div>
-        <v-btn color="primary" prepend-icon="mdi-plus" :to="{ path: '/networks/new' }">Create Network</v-btn>
-      </v-card-text>
-    </v-card>
+    <template v-else-if="store.error && store.items.length === 0">
+      <EmptyState variant="error" title="Failed to load networks" :subtitle="store.error">
+        <v-btn color="primary" prepend-icon="mdi-refresh" @click="load()">Retry</v-btn>
+      </EmptyState>
+    </template>
 
-    <v-card v-else :style="cardStyle" variant="flat" rounded="lg" class="mb-6">
-      <div class="d-flex align-center ga-2 pa-4" :style="headerStyle">
-        <v-icon color="primary">mdi-lan</v-icon>
-        <span class="font-weight-bold">Networks</span>
-        <v-chip size="x-small" color="primary">{{ filteredNetworks.length }}</v-chip>
-        <v-spacer />
+    <template v-else>
+      <v-row dense class="mb-4">
+        <v-col cols="auto"><StatCard label="Total" :value="store.items.length" icon="mdi-lan" color="primary" /></v-col>
+        <v-col cols="auto"><StatCard label="Interfaces" :value="interfaces.length" icon="mdi-network-outline" color="blue" /></v-col>
+      </v-row>
+
+      <!-- Networks table -->
+      <div class="d-flex align-center ga-3 flex-wrap mb-4">
         <v-text-field
           v-model="search"
           prepend-inner-icon="mdi-magnify"
-          placeholder="Search…"
+          placeholder="Filter networks…"
           variant="outlined"
           density="compact"
           hide-details
           clearable
-          style="max-width:240px"
+          style="max-width:300px"
         />
+        <v-spacer />
+        <span class="text-caption text-medium-emphasis">{{ filteredNetworks.length }} of {{ store.items.length }}</span>
       </div>
-      <v-data-table :headers="netHeaders" :items="filteredNetworks" :loading="loading" density="compact" hover no-data-text="No networks">
-        <template #item.name="{ item }">
-          <router-link :to="`/networks/${item.name}`" class="text-primary text-decoration-none font-weight-medium">{{ item.name }}</router-link>
-        </template>
-        <template #item.createdAt="{ item }">
-          <span class="text-caption text-medium-emphasis">{{ relativeTime(item.createdAt) }}</span>
-        </template>
-        <template #item.actions="{ item }">
-          <v-btn
-            size="x-small" variant="outlined" icon="mdi-delete" color="error"
-            :aria-label="`Delete network ${item.name}`"
-            title="Delete network"
-            @click="confirmDelete(item.name)"
-          />
-        </template>
-      </v-data-table>
-    </v-card>
 
-    <v-card :style="cardStyle" variant="flat" rounded="lg">
-      <div class="d-flex align-center ga-2 pa-4" :style="headerStyle">
-        <v-icon color="primary">mdi-network-outline</v-icon>
-        <span class="font-weight-bold">Network Interfaces</span>
-        <v-chip size="x-small" color="primary">{{ interfaces.length }}</v-chip>
-      </div>
-      <v-data-table :headers="nicHeaders" :items="interfaces" :loading="loading" density="compact" hover no-data-text="No network interfaces">
-        <template #item.state="{ item }"><StatusBadge :state="item.state" /></template>
-        <template #item.ips="{ item }">
-          <v-chip v-for="ip in item.ips" :key="ip" size="x-small" color="info" class="mr-1">{{ ip }}</v-chip>
-          <span v-if="!item.ips.length" class="text-medium-emphasis">—</span>
-        </template>
-      </v-data-table>
-    </v-card>
+      <v-card :style="cardStyle" variant="flat" rounded="lg" class="mb-6">
+        <v-data-table
+          :headers="netHeaders"
+          :items="filteredNetworks"
+          :loading="store.loading"
+          density="compact"
+          hover
+          item-key="name"
+          :items-per-page="pageSize"
+        >
+          <template #bottom>
+            <div class="d-flex align-center justify-end ga-4 pa-3">
+              <span class="text-caption text-medium-emphasis">Rows per page</span>
+              <v-select
+                v-model="pageSize"
+                :items="[20, 50, 100]"
+                density="compact"
+                variant="outlined"
+                hide-details
+                style="max-width:80px"
+              />
+              <v-pagination
+                v-model="page"
+                :length="Math.ceil(filteredNetworks.length / pageSize)"
+                density="compact"
+                size="small"
+                total-visible="5"
+              />
+            </div>
+          </template>
+
+          <template #item.name="{ item }">
+            <router-link :to="`/networks/${item.name}`" class="text-primary text-decoration-none font-weight-medium">{{ item.name }}</router-link>
+          </template>
+          <template #item.createdAt="{ item }">
+            <span class="text-caption text-medium-emphasis">{{ relativeTime(item.createdAt) }}</span>
+          </template>
+          <template #item.actions="{ item }">
+            <v-btn
+              size="x-small" variant="outlined" icon="mdi-delete" color="error"
+              :aria-label="`Delete network ${item.name}`"
+              title="Delete network"
+              @click="confirmDelete(item.name)"
+            />
+          </template>
+
+          <template #no-data>
+            <EmptyState
+              :variant="search ? 'no-results' : 'empty'"
+              :title="search ? 'No matching networks' : 'No networks'"
+              :subtitle="search ? 'Try clearing the search.' : 'Create your first network to get started.'"
+            >
+              <v-btn v-if="!search" color="primary" prepend-icon="mdi-plus" to="/networks/new">Create Network</v-btn>
+              <v-btn v-else variant="outlined" @click="search = ''">Clear search</v-btn>
+            </EmptyState>
+          </template>
+        </v-data-table>
+      </v-card>
+
+      <!-- Network Interfaces table -->
+      <div class="text-subtitle-2 font-weight-bold mb-3">Network Interfaces</div>
+      <v-card :style="cardStyle" variant="flat" rounded="lg">
+        <v-data-table
+          :headers="nicHeaders"
+          :items="interfaces"
+          :loading="nicLoading"
+          density="compact"
+          hover
+          item-key="name"
+          :items-per-page="20"
+        >
+          <template #item.state="{ item }"><StatusBadge :state="item.state" /></template>
+          <template #item.ips="{ item }">
+            <v-chip v-for="ip in item.ips" :key="ip" size="x-small" color="info" class="mr-1">{{ ip }}</v-chip>
+            <span v-if="!item.ips.length" class="text-medium-emphasis">—</span>
+          </template>
+          <template #no-data>
+            <EmptyState variant="empty" title="No network interfaces" subtitle="Network interfaces are created when machines attach to networks." />
+          </template>
+        </v-data-table>
+      </v-card>
+    </template>
 
     <v-dialog v-model="deleteDialog" max-width="400">
       <v-card>
@@ -81,7 +128,7 @@
           <v-icon color="error">mdi-alert-circle-outline</v-icon>
           Delete network?
         </v-card-title>
-        <v-card-text>Network <strong>{{ deleteTarget }}</strong> will be permanently deleted from namespace <b>{{ nsStore.active }}</b>. This action cannot be undone.</v-card-text>
+        <v-card-text>Network <strong>{{ deleteTarget }}</strong> will be permanently deleted. This action cannot be undone.</v-card-text>
         <v-alert v-if="deleteError" type="error" variant="tonal" class="mx-4 mb-2" density="compact">{{ deleteError }}</v-alert>
         <v-card-actions>
           <v-spacer />
@@ -95,32 +142,37 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { api, type Network, type NetworkInterface } from '@/api/client'
+import { api, type NetworkInterface } from '@/api/client'
+import { useNetworksStore }  from '@/stores/networks'
 import { useNamespaceStore } from '@/stores/namespace'
 import { useCardStyle }      from '@/composables/useCardStyle'
 import { relativeTime }      from '@/composables/useTime'
 import PageHeader  from '@/components/common/PageHeader.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import StatCard    from '@/components/common/StatCard.vue'
+import EmptyState  from '@/components/common/EmptyState.vue'
 
-const nsStore    = useNamespaceStore()
-const { cardStyle, headerStyle } = useCardStyle()
-const networks   = ref<Network[]>([])
+const store   = useNetworksStore()
+const nsStore = useNamespaceStore()
+const { cardStyle } = useCardStyle()
+
+const search     = ref('')
+const page       = ref(1)
+const pageSize   = ref(20)
 const interfaces = ref<NetworkInterface[]>([])
-const loading    = ref(false)
-const loadError  = ref<string | null>(null)
-const search       = ref('')
+const nicLoading = ref(false)
+
 const deleteDialog = ref(false)
 const deleteTarget = ref('')
 const deleting     = ref(false)
 const deleteError  = ref<string | null>(null)
 
-const availableCount  = computed(() => networks.value.filter(n => n.state === 'Available').length)
-const pendingCount    = computed(() => networks.value.filter(n => n.state === 'Pending').length)
 const filteredNetworks = computed(() => {
   const q = search.value.toLowerCase()
-  return q ? networks.value.filter(n => n.name.toLowerCase().includes(q)) : networks.value
+  return q ? store.items.filter(n => n.name.toLowerCase().includes(q)) : store.items
 })
+
+watch(search, () => { page.value = 1 })
 
 const netHeaders = [
   { title: 'Name',    key: 'name'      },
@@ -136,17 +188,12 @@ const nicHeaders = [
 ]
 
 async function load() {
-  loading.value = true
-  loadError.value = null
-  const ns = nsStore.active
+  store.load()
+  nicLoading.value = true
   try {
-    ;[networks.value, interfaces.value] = await Promise.all([
-      api.networks.list(ns), api.networks.listInterfaces(ns)
-    ])
-  } catch (e: unknown) {
-    loadError.value = e instanceof Error ? e.message : String(e)
+    interfaces.value = await api.networks.listInterfaces(nsStore.active)
   } finally {
-    loading.value = false
+    nicLoading.value = false
   }
 }
 
@@ -157,7 +204,7 @@ async function doDelete() {
   try {
     await api.networks.delete(nsStore.active, deleteTarget.value)
     deleteDialog.value = false
-    await load()
+    load()
   } catch (e: unknown) {
     deleteError.value = e instanceof Error ? e.message : String(e)
   } finally {

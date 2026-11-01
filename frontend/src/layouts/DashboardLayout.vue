@@ -15,6 +15,23 @@
 
       <template #append>
         <div class="d-flex align-center ga-2 pr-3">
+          <!-- Global search trigger -->
+          <v-btn
+            variant="outlined"
+            size="small"
+            prepend-icon="mdi-magnify"
+            class="search-trigger text-medium-emphasis"
+            aria-label="Search resources (Ctrl+K)"
+            title="Search resources (Ctrl+K)"
+            style="min-width:160px; justify-content:flex-start; font-weight:400;"
+            @click="searchOpen = true"
+          >
+            Search…
+            <template #append>
+              <v-kbd class="ml-2 text-caption" style="opacity:0.5">⌘K</v-kbd>
+            </template>
+          </v-btn>
+
           <!-- Cluster status -->
           <v-chip
             :color="clusterOk ? 'success' : 'error'"
@@ -73,29 +90,28 @@
       <v-list density="compact" nav class="pt-2 pb-0">
         <NavItem to="/overview" icon="mdi-view-dashboard-outline" label="Overview" :rail="rail" />
 
-        <v-divider class="my-2" />
-        <NavSection label="Compute" :rail="rail" />
+        <NavGroup label="Compute" :rail="rail" storage-key="compute" :default-open="true">
+          <NavItem to="/machines"   icon="mdi-server"              label="Machines"        :rail="rail" :badge="machineCount" />
+          <NavItem to="/topology"   icon="mdi-sitemap-outline"     label="Topology"        :rail="rail" />
+        </NavGroup>
 
-        <NavItem to="/machines"   icon="mdi-server"              label="Machines"        :rail="rail" :badge="machineCount" />
-        <NavItem to="/topology"   icon="mdi-sitemap-outline"     label="Topology"        :rail="rail" />
-        <NavItem to="/servers"    icon="mdi-server-security"     label="Dedicated Hosts" :rail="rail" />
+        <NavGroup label="Storage" :rail="rail" storage-key="storage" :default-open="true">
+          <NavItem to="/volumes"    icon="mdi-database-outline"    label="Volumes"         :rail="rail" />
+        </NavGroup>
 
-        <v-divider class="my-2" />
-        <NavSection label="Storage" :rail="rail" />
+        <NavGroup label="Networking" :rail="rail" storage-key="networking" :default-open="true">
+          <NavItem to="/networks"      icon="mdi-lan"              label="Networks"        :rail="rail" />
+          <NavItem to="/virtualips"    icon="mdi-earth"            label="Virtual IPs"     :rail="rail" />
+          <NavItem to="/loadbalancers" icon="mdi-scale-balance"    label="Load Balancers"  :rail="rail" />
+        </NavGroup>
 
-        <NavItem to="/volumes"    icon="mdi-database-outline"    label="Volumes"         :rail="rail" />
+        <NavGroup label="IPAM" :rail="rail" storage-key="ipam" :default-open="true">
+          <NavItem to="/prefixes"   icon="mdi-ip-network-outline"  label="IP Prefixes"     :rail="rail" />
+        </NavGroup>
 
-        <v-divider class="my-2" />
-        <NavSection label="Networking" :rail="rail" />
-
-        <NavItem to="/networks"      icon="mdi-lan"              label="Networks"        :rail="rail" />
-        <NavItem to="/virtualips"    icon="mdi-earth"            label="Virtual IPs"     :rail="rail" />
-        <NavItem to="/loadbalancers" icon="mdi-scale-balance"    label="Load Balancers"  :rail="rail" />
-
-        <v-divider class="my-2" />
-        <NavSection label="IPAM" :rail="rail" />
-
-        <NavItem to="/prefixes"   icon="mdi-ip-network-outline"  label="IP Prefixes"     :rail="rail" />
+        <NavGroup label="Operations" :rail="rail" storage-key="operations" :default-open="true">
+          <NavItem to="/servers"    icon="mdi-server-security"     label="Servers"         :rail="rail" />
+        </NavGroup>
       </v-list>
 
       <template #append>
@@ -120,6 +136,9 @@
 
     <!-- ── Global Toasts ─────────────────────────────────────────── -->
     <ToastNotifications />
+
+    <!-- ── Global Search ─────────────────────────────────────────── -->
+    <GlobalSearch v-model="searchOpen" />
   </v-app>
 </template>
 
@@ -134,13 +153,15 @@ import { useVirtualIPsStore }    from '@/stores/virtualips'
 import { useLoadBalancersStore } from '@/stores/loadbalancers'
 import { usePrefixesStore }      from '@/stores/prefixes'
 import NavItem            from '@/components/nav/NavItem.vue'
-import NavSection         from '@/components/nav/NavSection.vue'
+import NavGroup           from '@/components/nav/NavGroup.vue'
 import ToastNotifications from '@/components/common/ToastNotifications.vue'
+import GlobalSearch       from '@/components/common/GlobalSearch.vue'
 
 const vuetifyTheme = useTheme()
 const { mobile } = useDisplay()
 const rail   = ref(false)
 const drawer = ref(true)
+const searchOpen = ref(false)
 
 const nsStore       = useNamespaceStore()
 const machinesStore = useMachinesStore()

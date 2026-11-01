@@ -17,45 +17,105 @@
       <v-skeleton-loader type="table-row@8" />
     </template>
 
+    <!-- Error state -->
+    <template v-else-if="store.error && store.items.length === 0">
+      <EmptyState variant="error" title="Failed to load machines" :subtitle="store.error">
+        <v-btn color="primary" prepend-icon="mdi-refresh" @click="store.load()">Retry</v-btn>
+      </EmptyState>
+    </template>
+
     <template v-else>
-      <v-row class="mb-6" dense>
+      <!-- Stat cards -->
+      <v-row class="mb-4" dense>
         <v-col v-for="s in stats" :key="s.label" cols="auto">
           <StatCard :value="s.value" :label="s.label" :icon="s.icon" :color="s.color" />
         </v-col>
       </v-row>
 
-      <v-text-field
-        v-model="search"
-        prepend-inner-icon="mdi-magnify"
-        placeholder="Search by name, class, image…"
-        variant="outlined"
-        density="compact"
-        hide-details
-        class="mb-4"
-        clearable
-        style="max-width: 360px"
-      />
+      <!-- Toolbar: search + filters + bulk actions -->
+      <div class="d-flex align-center ga-3 flex-wrap mb-4">
+        <v-text-field
+          v-model="search"
+          prepend-inner-icon="mdi-magnify"
+          placeholder="Filter by name, class, image…"
+          variant="outlined"
+          density="compact"
+          hide-details
+          clearable
+          style="max-width: 300px"
+        />
 
-      <v-card :style="cardStyle" variant="flat" rounded="lg">
-        <div class="d-flex align-center ga-2 pa-4" :style="headerStyle">
-          <v-icon color="primary">mdi-server</v-icon>
-          <span class="font-weight-bold">All Machines</span>
-          <v-chip size="x-small" color="primary">{{ filtered.length }}</v-chip>
-          <v-spacer />
-          <span v-if="filtered.length !== store.items.length" class="text-caption text-medium-emphasis">
-            {{ filtered.length }} of {{ store.items.length }}
-          </span>
+        <!-- State filter chips -->
+        <div class="d-flex ga-2 flex-wrap">
+          <v-chip
+            v-for="state in stateFilters"
+            :key="state.value"
+            :color="stateFilter === state.value ? state.color : undefined"
+            :variant="stateFilter === state.value ? 'tonal' : 'outlined'"
+            size="small"
+            clickable
+            @click="stateFilter = stateFilter === state.value ? null : state.value"
+          >
+            {{ state.label }}
+          </v-chip>
         </div>
 
+        <!-- Bulk action bar (shown when items are selected) -->
+        <template v-if="selected.length > 0">
+          <v-divider vertical class="mx-2" />
+          <span class="text-caption text-medium-emphasis">{{ selected.length }} selected</span>
+          <v-btn
+            size="small" variant="outlined" color="warning" prepend-icon="mdi-power"
+            @click="bulkPower('Off')"
+          >Power Off</v-btn>
+          <v-btn
+            size="small" variant="outlined" color="success" prepend-icon="mdi-power"
+            @click="bulkPower('On')"
+          >Power On</v-btn>
+          <v-btn
+            size="small" variant="outlined" color="error" prepend-icon="mdi-delete"
+            @click="bulkDeleteDialog = true"
+          >Delete</v-btn>
+        </template>
+
+        <v-spacer />
+        <span class="text-caption text-medium-emphasis">{{ filtered.length }} of {{ store.items.length }}</span>
+      </div>
+
+      <v-card :style="cardStyle" variant="flat" rounded="lg">
         <v-data-table
+          v-model="selected"
           :headers="headers"
           :items="filtered"
           :loading="store.loading"
           density="compact"
           hover
           item-key="name"
+          show-select
+          :items-per-page="pageSize"
           :no-data-text="store.error ?? 'No machines found'"
         >
+          <template #bottom>
+            <div class="d-flex align-center justify-end ga-4 pa-3">
+              <span class="text-caption text-medium-emphasis">Rows per page</span>
+              <v-select
+                v-model="pageSize"
+                :items="[20, 50, 100]"
+                density="compact"
+                variant="outlined"
+                hide-details
+                style="max-width:80px"
+              />
+              <v-pagination
+                v-model="page"
+                :length="Math.ceil(filtered.length / pageSize)"
+                density="compact"
+                size="small"
+                total-visible="5"
+              />
+            </div>
+          </template>
+
           <template #item.name="{ item }">
             <router-link :to="`/machines/${item.name}`" class="text-primary text-decoration-none font-weight-medium">{{ item.name }}</router-link>
           </template>
@@ -94,10 +154,25 @@
               />
             </div>
           </template>
+
+          <!-- Empty state for filtered results -->
+          <template #no-data>
+            <EmptyState
+              :variant="search || stateFilter ? 'no-results' : 'empty'"
+              :title="search || stateFilter ? 'No matching machines' : 'No machines'"
+              :subtitle="search || stateFilter
+                ? 'Try clearing the search or filter.'
+                : 'Create your first machine to get started.'"
+            >
+              <v-btn v-if="!search && !stateFilter" color="primary" prepend-icon="mdi-plus" to="/machines/new">Create Machine</v-btn>
+              <v-btn v-else variant="outlined" @click="search = ''; stateFilter = null">Clear filters</v-btn>
+            </EmptyState>
+          </template>
         </v-data-table>
       </v-card>
     </template>
 
+    <!-- Single delete dialog -->
     <v-dialog v-model="deleteDialog" max-width="420">
       <v-card>
         <v-card-title class="d-flex align-center ga-2">
@@ -109,6 +184,24 @@
           <v-spacer />
           <v-btn variant="outlined" @click="deleteDialog = false">Cancel</v-btn>
           <v-btn color="error" @click="doDelete">Delete</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Bulk delete dialog -->
+    <v-dialog v-model="bulkDeleteDialog" max-width="480">
+      <v-card>
+        <v-card-title class="d-flex align-center ga-2">
+          <v-icon color="error">mdi-alert-circle-outline</v-icon>
+          Delete {{ selected.length }} machines?
+        </v-card-title>
+        <v-card-text>
+          This will permanently delete all {{ selected.length }} selected machines. This action cannot be undone.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="outlined" @click="bulkDeleteDialog = false">Cancel</v-btn>
+          <v-btn color="error" @click="doBulkDelete">Delete All</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -125,13 +218,27 @@ import PageHeader   from '@/components/common/PageHeader.vue'
 import StatusBadge  from '@/components/common/StatusBadge.vue'
 import StatCard     from '@/components/common/StatCard.vue'
 import CopyChip     from '@/components/common/CopyChip.vue'
+import EmptyState   from '@/components/common/EmptyState.vue'
 
 const store   = useMachinesStore()
 const nsStore = useNamespaceStore()
-const { cardStyle, headerStyle } = useCardStyle()
-const search  = ref('')
-const deleteDialog  = ref(false)
-const pendingDelete = ref('')
+const { cardStyle } = useCardStyle()
+
+const search      = ref('')
+const stateFilter = ref<string | null>(null)
+const page        = ref(1)
+const pageSize    = ref(20)
+const selected    = ref<string[]>([])
+
+const deleteDialog     = ref(false)
+const bulkDeleteDialog = ref(false)
+const pendingDelete    = ref('')
+
+const stateFilters = [
+  { label: 'Running',     value: 'Running',     color: 'success' },
+  { label: 'Pending',     value: 'Pending',     color: 'warning' },
+  { label: 'Terminating', value: 'Terminating', color: 'error' },
+]
 
 const headers = [
   { title: 'Name',         key: 'name'         },
@@ -145,33 +252,56 @@ const headers = [
 ]
 
 const filtered = computed(() => {
+  let items = store.items
   const q = search.value.toLowerCase()
-  if (!q) return store.items
-  return store.items.filter(m =>
-    m.name.toLowerCase().includes(q) ||
-    m.machineClass.toLowerCase().includes(q) ||
-    m.image.toLowerCase().includes(q)
-  )
+  if (q) {
+    items = items.filter(m =>
+      m.name.toLowerCase().includes(q) ||
+      m.machineClass.toLowerCase().includes(q) ||
+      m.image.toLowerCase().includes(q)
+    )
+  }
+  if (stateFilter.value) {
+    items = items.filter(m => m.state === stateFilter.value)
+  }
+  return items
 })
 
 const stats = computed(() => {
   const counts = store.items.reduce((acc, m) => {
     const s = (m.state ?? '').toLowerCase()
-    if (s === 'running')  acc.running++
-    else if (s === 'pending')  acc.pending++
-    else if (s === 'shutdown') acc.shutdown++
+    if (s === 'running')      acc.running++
+    else if (s === 'pending') acc.pending++
+    else                      acc.other++
     return acc
-  }, { running: 0, pending: 0, shutdown: 0 })
+  }, { running: 0, pending: 0, other: 0 })
   return [
-    { label: 'Running',  value: counts.running,  icon: 'mdi-check-circle-outline', color: 'success' },
-    { label: 'Pending',  value: counts.pending,  icon: 'mdi-clock-outline',        color: 'warning' },
-    { label: 'Shutdown', value: counts.shutdown, icon: 'mdi-power-off',            color: 'secondary' },
-    { label: 'Total',    value: store.items.length, icon: 'mdi-server',            color: 'primary' },
+    { label: 'Running',  value: counts.running, icon: 'mdi-check-circle-outline', color: 'success' },
+    { label: 'Pending',  value: counts.pending, icon: 'mdi-clock-outline',        color: 'warning' },
+    { label: 'Other',    value: counts.other,   icon: 'mdi-power-off',            color: 'secondary' },
+    { label: 'Total',    value: store.items.length, icon: 'mdi-server',           color: 'primary' },
   ]
 })
 
+// Reset to page 1 when filter changes
+watch([search, stateFilter], () => { page.value = 1 })
+
 function confirmDelete(name: string) { pendingDelete.value = name; deleteDialog.value = true }
-async function doDelete() { await store.deleteMachine(pendingDelete.value); deleteDialog.value = false }
+async function doDelete() {
+  await store.deleteMachine(pendingDelete.value)
+  deleteDialog.value = false
+}
+
+async function bulkPower(state: 'On' | 'Off') {
+  await Promise.allSettled(selected.value.map(name => store.setPower(name, state)))
+  selected.value = []
+}
+
+async function doBulkDelete() {
+  await Promise.allSettled(selected.value.map(name => store.deleteMachine(name)))
+  selected.value = []
+  bulkDeleteDialog.value = false
+}
 
 onMounted(() => store.load())
 watch(() => nsStore.active, () => store.load())
