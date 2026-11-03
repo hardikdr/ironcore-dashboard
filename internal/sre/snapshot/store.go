@@ -118,6 +118,7 @@ func cloneSnapshot(input Snapshot) Snapshot {
 	output := input
 	output.ObjectCounts = cloneStringIntMap(input.ObjectCounts)
 	output.Warnings = append([]string(nil), input.Warnings...)
+	output.Gaps = append([]AccessGap(nil), input.Gaps...)
 	output.Resources = make([]model.Resource, len(input.Resources))
 	for index := range input.Resources {
 		output.Resources[index] = cloneResource(input.Resources[index])

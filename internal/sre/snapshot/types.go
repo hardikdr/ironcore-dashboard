@@ -25,6 +25,13 @@ type Snapshot struct {
 	ObjectCounts map[string]int   `json:"objectCounts"`
 	Partial      bool             `json:"partial"`
 	Warnings     []string         `json:"warnings,omitempty"`
+	Gaps         []AccessGap      `json:"gaps,omitempty"`
+}
+
+type AccessGap struct {
+	Resource string            `json:"resource"`
+	Access   model.AccessState `json:"access"`
+	Message  string            `json:"message"`
 }
 
 type SourceStatus struct {
