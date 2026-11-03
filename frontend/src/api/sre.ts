@@ -4,7 +4,7 @@ export interface SreSourceMeta {
   id: string
   collectedAt?: string
   freshness: 'fresh' | 'stale' | 'unknown' | string
-  access: 'ok' | 'forbidden' | 'unavailable' | string
+  access: 'ok' | 'denied' | 'unreachable' | 'unsupported' | 'not-configured' | 'unknown' | string
   duration: number
   errorClass?: string
   objectCount?: Record<string, number>
@@ -23,7 +23,7 @@ export interface SreEnvelope<T> { data: T; meta: SreMeta }
 export interface SreResource {
   type: string
   key: string
-  provenance: { environment?: string; source?: string; kind: string; namespace?: string; name: string; uid?: string }
+  provenance: { sourceId: string; environment?: string; clusterRole?: string; installationRole?: string; group?: string; version?: string; kind: string; namespace?: string; name: string; uid?: string; collectedAt?: string; freshness?: string; access?: string; evidence?: string }
   state?: string
   health?: string
   labels?: Record<string, string>
@@ -47,6 +47,12 @@ export interface SreSearchResult extends SreResourceDTO {
   ranges: Array<{ start: number; end: number }>
 }
 
+export interface SreFact { label: string; value: string; sourceId?: string; resource?: string; evidence?: string; confidence?: string }
+export interface SreGap { area: string; state: string; message: string }
+export interface SreVMSummary { vm: SreResource; localization: string; facts: SreFact[]; gaps: SreGap[] }
+export interface SreRelation { from: string; to: string; type: string; evidence: string; fieldPath: string; confidence: string }
+export interface SreGraph { resources: SreResource[]; relations: SreRelation[]; truncated: boolean }
+
 async function get<T>(path: string, signal?: AbortSignal): Promise<SreEnvelope<T>> {
   const response = await fetch(`${BASE}${path}`, signal ? { signal } : {})
   if (!response.ok) {
@@ -69,5 +75,9 @@ export const sreApi = {
   summary: (environment?: string, signal?: AbortSignal) => get<Record<string, number>>(`/summary${query({ environment })}`, signal),
   search: (value: string, signal?: AbortSignal) => get<SreSearchResult[]>(`/search${query({ q: value, limit: 25 })}`, signal),
   zones: (environment?: string, signal?: AbortSignal) => get<SreResourceDTO[]>(`/zones${query({ environment })}`, signal),
+  vms: (filters: { environment?: string; state?: string; continue?: string } = {}, signal?: AbortSignal) => get<SreResourceDTO[]>(`/vms${query({ ...filters, limit: 100 })}`, signal),
+  vm: (id: string, signal?: AbortSignal) => get<SreVMSummary>(`/vms/${encodeURIComponent(id)}`, signal),
+  graph: (id: string, signal?: AbortSignal) => get<SreGraph>(`/graph${query({ root: id, depth: 4, limit: 300 })}`, signal),
+  sanitized: (id: string, signal?: AbortSignal) => get<{ id: string; details: unknown }>(`/resources/${encodeURIComponent(id)}/sanitized`, signal),
   observations: (signal?: AbortSignal) => get<SreObservation[]>('/observations', signal),
 }
