@@ -1,0 +1,45 @@
+{
+  "sourceFamily": "central-ironcore",
+  "recordedAt": "2026-11-03T12:00:00Z",
+  "source": {"id": "canary-ironcore", "environment": "canary", "access": "ok", "freshness": "fresh"},
+  "resources": [
+    {
+      "key": "canary-ironcore/compute.ironcore.dev/IronCoreVM/shoot--feos--fecode/worker-a-0/vm-canary-001",
+      "type": "ironcore-vm",
+      "provenance": {"sourceId": "canary-ironcore", "environment": "canary", "clusterRole": "central-ironcore", "group": "compute.ironcore.dev", "version": "v1alpha1", "kind": "IronCoreVM", "namespace": "shoot--feos--fecode", "name": "worker-a-0", "uid": "vm-canary-001", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "observed-live"},
+      "health": "healthy",
+      "state": "Running",
+      "labels": {"extension.ironcore.dev/cluster-name": "shoot--feos--fecode", "kubernetes.io/cluster": "shoot--feos--fecode"},
+      "references": [
+        {"group": "compute.ironcore.dev", "kind": "MachinePool", "name": "cn-wdf4a-7", "fieldPath": ".spec.machinePoolRef.name"},
+        {"group": "networking.ironcore.dev", "kind": "Nic", "namespace": "shoot--feos--fecode", "name": "worker-a-0-primary", "uid": "nic-canary-001", "fieldPath": ".status.networkInterfaces[0].networkInterfaceRef"},
+        {"group": "storage.ironcore.dev", "kind": "Volume", "namespace": "shoot--feos--fecode", "name": "worker-a-0-root", "uid": "volume-canary-001", "fieldPath": ".status.volumes[0].volumeRef"}
+      ]
+    },
+    {
+      "key": "canary-ironcore/compute.ironcore.dev/MachinePool/_/cn-wdf4a-7/pool-canary-007",
+      "type": "machine-pool",
+      "provenance": {"sourceId": "canary-ironcore", "environment": "canary", "clusterRole": "central-ironcore", "group": "compute.ironcore.dev", "version": "v1alpha1", "kind": "MachinePool", "name": "cn-wdf4a-7", "uid": "pool-canary-007", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "observed-live"},
+      "health": "healthy",
+      "providerId": "libvirt-provider://cn-wdf4a-7",
+      "labels": {"topology.ironcore.dev/zone": "wdf4a", "topology.ironcore.dev/region": "wdf4"}
+    },
+    {
+      "key": "canary-ironcore/networking.ironcore.dev/Nic/shoot--feos--fecode/worker-a-0-primary/nic-canary-001",
+      "type": "nic",
+      "provenance": {"sourceId": "canary-ironcore", "environment": "canary", "clusterRole": "central-ironcore", "group": "networking.ironcore.dev", "version": "v1alpha1", "kind": "Nic", "namespace": "shoot--feos--fecode", "name": "worker-a-0-primary", "uid": "nic-canary-001", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "observed-live"},
+      "health": "healthy",
+      "addresses": ["10.20.0.17"],
+      "labels": {"kubernetes.io/cluster": "shoot--feos--fecode"},
+      "references": [{"group": "compute.ironcore.dev", "kind": "IronCoreVM", "namespace": "shoot--feos--fecode", "name": "worker-a-0", "uid": "vm-canary-001", "fieldPath": ".spec.machineRef"}]
+    },
+    {
+      "key": "canary-ironcore/networking.ironcore.dev/LoadBalancer/shoot--feos--fecode/api/lb-canary-001",
+      "type": "load-balancer",
+      "provenance": {"sourceId": "canary-ironcore", "environment": "canary", "clusterRole": "central-ironcore", "group": "networking.ironcore.dev", "version": "v1alpha1", "kind": "LoadBalancer", "namespace": "shoot--feos--fecode", "name": "api", "uid": "lb-canary-001", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "observed-live"},
+      "health": "healthy",
+      "addresses": ["203.0.113.10"],
+      "selector": {"kubernetes.io/cluster": "shoot--feos--fecode"}
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "sourceFamily": "zonal-capi",
+  "recordedAt": "2026-11-03T12:00:00Z",
+  "sources": [
+    {"id": "wdf4a", "environment": "canary", "zone": "wdf4a", "access": "ok", "freshness": "fresh", "roles": {"management": 3, "compute": 16, "storage": 4}},
+    {"id": "wdf4b", "environment": "canary", "zone": "wdf4b", "access": "ok", "freshness": "fresh", "roles": {"management": 3, "compute": 16, "storage": 4}},
+    {"id": "wdf4c", "environment": "canary", "zone": "wdf4c", "access": "unreachable", "freshness": "stale", "roles": {"management": 3, "compute": 16, "storage": 4}},
+    {"id": "wdf4d", "environment": "canary", "zone": "wdf4d", "access": "not-configured", "freshness": "fresh", "roles": {"management": 3, "compute": 0, "storage": 0}},
+    {"id": "wdf4e", "environment": "canary", "zone": "wdf4e", "access": "not-configured", "freshness": "fresh", "roles": {"management": 3, "compute": 0, "storage": 0}},
+    {"id": "wdf4f", "environment": "dev", "zone": "wdf4f", "access": "ok", "freshness": "fresh", "roles": {"management": 3, "compute": 2, "storage": 4}},
+    {"id": "wdf4g", "environment": "dev", "zone": "wdf4g", "access": "ok", "freshness": "fresh", "roles": {"management": 3, "compute": 2, "storage": 4}}
+  ],
+  "resources": [
+    {
+      "key": "wdf4a/core/PhysicalNode/_/cn-wdf4a-7/node-wdf4a-7",
+      "type": "physical-node",
+      "provenance": {"sourceId": "wdf4a", "environment": "canary", "clusterRole": "zonal-capi", "group": "core", "version": "v1", "kind": "PhysicalNode", "name": "cn-wdf4a-7", "uid": "node-wdf4a-7", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "observed-live"},
+      "health": "healthy",
+      "labels": {"ironcore.dev/role": "compute", "topology.kubernetes.io/zone": "wdf4a"}
+    }
+  ]
+}

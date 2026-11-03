@@ -1,0 +1,26 @@
+{
+  "sourceFamily": "gardener",
+  "recordedAt": "2026-11-03T12:00:00Z",
+  "sources": [
+    {"id": "sap-canary-hosting-gardener", "role": "hosting", "access": "ok", "freshness": "fresh"},
+    {"id": "ironcore-consumer-gardener", "role": "consumer", "access": "denied", "freshness": "unknown", "gap": "Shoot inventory is unavailable because list access was denied"},
+    {"id": "wdf4-bare-metal-gardener", "role": "bare-metal", "access": "ok", "freshness": "fresh"}
+  ],
+  "resources": [
+    {
+      "key": "ironcore-consumer-gardener/core/Shoot/garden-feos/fecode/shoot-feos-fecode",
+      "type": "shoot",
+      "provenance": {"sourceId": "ironcore-consumer-gardener", "environment": "canary", "clusterRole": "consumer-gardener", "group": "core", "version": "v1beta1", "kind": "Shoot", "namespace": "garden-feos", "name": "fecode", "uid": "shoot-feos-fecode", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "unknown", "access": "denied", "evidence": "derived"},
+      "health": "unknown",
+      "aliases": ["shoot--feos--fecode", "FEOS/fecode"]
+    },
+    {
+      "key": "wdf4-bare-metal-gardener/machine.sapcloud.io/McmMachine/garden-infra/wdf4ai-worker-0/mcm-metal-001",
+      "type": "mcm-machine",
+      "provenance": {"sourceId": "wdf4-bare-metal-gardener", "environment": "canary", "clusterRole": "bare-metal-gardener", "group": "machine.sapcloud.io", "version": "v1alpha1", "kind": "McmMachine", "namespace": "garden-infra", "name": "wdf4ai-worker-0", "uid": "mcm-metal-001", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "observed-live"},
+      "health": "healthy",
+      "providerId": "ironcore-metal://server-ai-01",
+      "labels": {"node": "wdf4ai-worker-0"}
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "sourceFamily": "central-ironcore",
+  "recordedAt": "2026-11-03T12:00:00Z",
+  "source": {"id": "dev-ironcore", "environment": "dev", "access": "ok", "freshness": "fresh"},
+  "resources": [
+    {
+      "key": "dev-ironcore/compute.ironcore.dev/IronCoreVM/dev-team/dev-worker-0/vm-dev-001",
+      "type": "ironcore-vm",
+      "provenance": {"sourceId": "dev-ironcore", "environment": "dev", "clusterRole": "central-ironcore", "group": "compute.ironcore.dev", "version": "v1alpha1", "kind": "IronCoreVM", "namespace": "dev-team", "name": "dev-worker-0", "uid": "vm-dev-001", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "observed-live"},
+      "health": "unknown",
+      "state": "Pending",
+      "references": [{"group": "compute.ironcore.dev", "kind": "MachinePool", "name": "cn-wdf4f-7", "fieldPath": ".spec.machinePoolRef.name"}]
+    },
+    {
+      "key": "dev-ironcore/storage.ironcore.dev/Volume/dev-team/dev-worker-0-root/volume-dev-001",
+      "type": "volume",
+      "provenance": {"sourceId": "dev-ironcore", "environment": "dev", "clusterRole": "central-ironcore", "group": "storage.ironcore.dev", "version": "v1alpha1", "kind": "Volume", "namespace": "dev-team", "name": "dev-worker-0-root", "uid": "volume-dev-001", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "observed-live"},
+      "health": "healthy",
+      "references": [{"group": "storage.ironcore.dev", "kind": "VolumePool", "name": "wdf4g", "fieldPath": ".spec.volumePoolRef.name"}]
+    }
+  ]
+}
