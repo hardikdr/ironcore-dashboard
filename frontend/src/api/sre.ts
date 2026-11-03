@@ -42,6 +42,7 @@ export interface SreObservation extends SreResource {
   confidence: string
   firstObserved: string
   lastObserved: string
+  related?: string[]
 }
 
 export interface SreResourceDTO { id: string; resource: SreResource }
@@ -84,6 +85,9 @@ export const sreApi = {
   zones: (environment?: string, signal?: AbortSignal) => get<SreResourceDTO[]>(`/zones${query({ environment })}`, signal),
   zone: (name: string, signal?: AbortSignal) => get<SreZoneSummary>(`/zones/${encodeURIComponent(name)}`, signal),
   node: (id: string, signal?: AbortSignal) => get<SreResourceDTO>(`/nodes/${encodeURIComponent(id)}`, signal),
+  network: (id: string, signal?: AbortSignal) => get<SreResourceDTO>(`/networks/${encodeURIComponent(id)}`, signal),
+  loadBalancer: (id: string, signal?: AbortSignal) => get<SreResourceDTO>(`/loadbalancers/${encodeURIComponent(id)}`, signal),
+  volume: (id: string, signal?: AbortSignal) => get<SreResourceDTO>(`/volumes/${encodeURIComponent(id)}`, signal),
   vms: (filters: { environment?: string; state?: string; continue?: string } = {}, signal?: AbortSignal) => get<SreResourceDTO[]>(`/vms${query({ ...filters, limit: 100 })}`, signal),
   vm: (id: string, signal?: AbortSignal) => get<SreVMSummary>(`/vms/${encodeURIComponent(id)}`, signal),
   shoots: (environment?: string, signal?: AbortSignal) => get<SreResourceDTO[]>(`/shoots${query({ environment, limit: 100 })}`, signal),

@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 
-const sreView = () => import('@/views/sre/SrePlaceholderView.vue')
 const sreMeta = (title: string) => ({ console: 'sre', readOnly: true, title })
 
 const router = createRouter({
@@ -44,11 +43,11 @@ const router = createRouter({
         { path: 'sre/shoots/:id',      component: () => import('@/views/sre/ShootDetailView.vue'), meta: sreMeta('Shoot') },
         { path: 'sre/vms',             component: () => import('@/views/sre/VmsView.vue'), meta: sreMeta('Virtual Machines') },
         { path: 'sre/vms/:id',         component: () => import('@/views/sre/VmDetailView.vue'), meta: sreMeta('Virtual Machine') },
-        { path: 'sre/dependencies/:id',component: sreView, meta: sreMeta('Dependencies') },
-        { path: 'sre/networking',      component: sreView, meta: sreMeta('Networking') },
-        { path: 'sre/loadbalancers/:id',component: sreView, meta: sreMeta('Load Balancer') },
-        { path: 'sre/storage',         component: sreView, meta: sreMeta('Storage') },
-        { path: 'sre/volumes/:id',     component: sreView, meta: sreMeta('Volume') },
+        { path: 'sre/dependencies/:id',component: () => import('@/views/sre/DependencyExplorerView.vue'), meta: sreMeta('Dependencies') },
+        { path: 'sre/networking',      component: () => import('@/views/sre/NetworkingSreView.vue'), meta: sreMeta('Networking') },
+        { path: 'sre/loadbalancers/:id',component: () => import('@/views/sre/LoadBalancerSreDetailView.vue'), meta: sreMeta('Load Balancer') },
+        { path: 'sre/storage',         component: () => import('@/views/sre/StorageSreView.vue'), meta: sreMeta('Storage') },
+        { path: 'sre/volumes/:id',     component: () => import('@/views/sre/VolumeSreDetailView.vue'), meta: sreMeta('Volume') },
         { path: 'sre/sources',         component: () => import('@/views/sre/SourcesView.vue'), meta: sreMeta('Sources') },
         { path: ':pathMatch(.*)*',     component: () => import('@/views/NotFoundView.vue') },
       ]
