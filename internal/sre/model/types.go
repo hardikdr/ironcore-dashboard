@@ -62,19 +62,20 @@ const (
 )
 
 type Provenance struct {
-	SourceID    string        `json:"sourceId"`
-	Environment string        `json:"environment"`
-	ClusterRole string        `json:"clusterRole"`
-	Group       string        `json:"group"`
-	Version     string        `json:"version"`
-	Kind        string        `json:"kind"`
-	Namespace   string        `json:"namespace,omitempty"`
-	Name        string        `json:"name"`
-	UID         string        `json:"uid,omitempty"`
-	CollectedAt time.Time     `json:"collectedAt"`
-	Freshness   Freshness     `json:"freshness"`
-	Access      AccessState   `json:"access"`
-	Evidence    EvidenceClass `json:"evidence"`
+	SourceID         string        `json:"sourceId"`
+	Environment      string        `json:"environment"`
+	ClusterRole      string        `json:"clusterRole"`
+	InstallationRole string        `json:"installationRole,omitempty"`
+	Group            string        `json:"group"`
+	Version          string        `json:"version"`
+	Kind             string        `json:"kind"`
+	Namespace        string        `json:"namespace,omitempty"`
+	Name             string        `json:"name"`
+	UID              string        `json:"uid,omitempty"`
+	CollectedAt      time.Time     `json:"collectedAt"`
+	Freshness        Freshness     `json:"freshness"`
+	Access           AccessState   `json:"access"`
+	Evidence         EvidenceClass `json:"evidence"`
 }
 
 type ObjectReference struct {
