@@ -35,8 +35,8 @@ const router = createRouter({
         { path: 'prefixes/new',        component: () => import('@/views/IPPrefixCreateView.vue') },
         { path: 'prefixes/:name',      component: () => import('@/views/IPPrefixDetailView.vue') },
         { path: 'settings',            component: () => import('@/views/SettingsView.vue') },
-        { path: 'sre/landscape',       component: sreView, meta: sreMeta('Landscape') },
-        { path: 'sre/triage',          component: sreView, meta: sreMeta('Triage') },
+        { path: 'sre/landscape',       component: () => import('@/views/sre/LandscapeView.vue'), meta: sreMeta('Landscape') },
+        { path: 'sre/triage',          component: () => import('@/views/sre/TriageView.vue'), meta: sreMeta('Triage') },
         { path: 'sre/zones',           component: sreView, meta: sreMeta('Zones') },
         { path: 'sre/zones/:zone',     component: sreView, meta: sreMeta('Zone') },
         { path: 'sre/nodes/:id',       component: sreView, meta: sreMeta('Node') },
@@ -49,7 +49,7 @@ const router = createRouter({
         { path: 'sre/loadbalancers/:id',component: sreView, meta: sreMeta('Load Balancer') },
         { path: 'sre/storage',         component: sreView, meta: sreMeta('Storage') },
         { path: 'sre/volumes/:id',     component: sreView, meta: sreMeta('Volume') },
-        { path: 'sre/sources',         component: sreView, meta: sreMeta('Sources') },
+        { path: 'sre/sources',         component: () => import('@/views/sre/SourcesView.vue'), meta: sreMeta('Sources') },
         { path: ':pathMatch(.*)*',     component: () => import('@/views/NotFoundView.vue') },
       ]
     }

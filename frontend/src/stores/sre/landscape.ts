@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { sreApi, type SreMeta, type SreResourceDTO } from '@/api/sre'
+import { sreApi, type SreMeta, type SreObservation, type SreResourceDTO } from '@/api/sre'
 
 export const useSreLandscapeStore = defineStore('sre-landscape', () => {
   const summary = ref<Record<string, number>>({})
   const zones = ref<SreResourceDTO[]>([])
-  const observations = ref<unknown[]>([])
+  const observations = ref<SreObservation[]>([])
   const meta = ref<SreMeta | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)

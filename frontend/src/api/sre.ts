@@ -30,6 +30,15 @@ export interface SreResource {
   relationships?: unknown[]
 }
 
+export interface SreObservation extends SreResource {
+  reason: string
+  message: string
+  severity: string
+  confidence: string
+  firstObserved: string
+  lastObserved: string
+}
+
 export interface SreResourceDTO { id: string; resource: SreResource }
 export interface SreSearchResult extends SreResourceDTO {
   matchedField: string
@@ -60,5 +69,5 @@ export const sreApi = {
   summary: (environment?: string, signal?: AbortSignal) => get<Record<string, number>>(`/summary${query({ environment })}`, signal),
   search: (value: string, signal?: AbortSignal) => get<SreSearchResult[]>(`/search${query({ q: value, limit: 25 })}`, signal),
   zones: (environment?: string, signal?: AbortSignal) => get<SreResourceDTO[]>(`/zones${query({ environment })}`, signal),
-  observations: (signal?: AbortSignal) => get<unknown[]>('/observations', signal),
+  observations: (signal?: AbortSignal) => get<SreObservation[]>('/observations', signal),
 }
