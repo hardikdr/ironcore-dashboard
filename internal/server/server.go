@@ -27,6 +27,10 @@ type Server struct {
 }
 
 func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dynamic.Interface, frontendFS fs.FS) *Server {
+	return NewWithSRE(cs, k8sClient, dynClient, frontendFS, nil)
+}
+
+func NewWithSRE(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dynamic.Interface, frontendFS fs.FS, sreHandler http.Handler) *Server {
 	s := &Server{ironcore: cs, k8s: k8sClient, dyn: dynClient}
 	r := chi.NewRouter()
 
@@ -123,6 +127,10 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dyna
 
 	// Machine WebSocket console
 	r.Get("/api/v1/ws/machines/{ns}/{name}/console", s.handleMachineConsole)
+
+	if sreHandler != nil {
+		r.Mount("/api/sre/v1", sreHandler)
+	}
 
 	// Serve built Vue SPA for all other routes
 	if frontendFS != nil {

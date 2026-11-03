@@ -114,6 +114,19 @@ func (registry *Registry) Get(id string) (Entry, bool) {
 
 func (registry *Registry) Count() int { return len(registry.entries) }
 
+func (registry *Registry) Entries() []Entry {
+	ids := make([]string, 0, len(registry.entries))
+	for id := range registry.entries {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	result := make([]Entry, 0, len(ids))
+	for _, id := range ids {
+		result = append(result, registry.entries[id])
+	}
+	return result
+}
+
 func (registry *Registry) Diagnostics() []Diagnostic {
 	return append([]Diagnostic(nil), registry.diagnostics...)
 }

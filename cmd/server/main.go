@@ -4,12 +4,19 @@ import (
 	"context"
 	"flag"
 	"log"
+	"net/http"
+	"time"
 
 	rootpkg "github.com/ironcore-dev/ironcore-dashboard"
 	ironclient "github.com/ironcore-dev/ironcore-dashboard/internal/client"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/server"
+	sreapi "github.com/ironcore-dev/ironcore-dashboard/internal/sre/api"
+	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/collector"
 	sreconfig "github.com/ironcore-dev/ironcore-dashboard/internal/sre/config"
+	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/model"
+	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/snapshot"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/source"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -22,6 +29,7 @@ func main() {
 	sreConfig := flag.String("sre-config", "", "path to read-only multi-source SRE configuration (empty = disabled)")
 	flag.Parse()
 
+	var sreHandler http.Handler
 	if *sreConfig != "" {
 		cfg, err := sreconfig.Load(*sreConfig)
 		if err != nil {
@@ -32,6 +40,35 @@ func main() {
 			log.Fatalf("SRE source registry: %v", err)
 		}
 		if cfg.Enabled {
+			store := snapshot.NewStore()
+			collectors := make([]collector.Collector, 0, registry.Count())
+			for _, entry := range registry.Entries() {
+				dynamicClient, err := dynamic.NewForConfig(entry.Config)
+				if err != nil {
+					log.Fatalf("SRE source %q dynamic client: %v", entry.Metadata.ID, err)
+				}
+				discoveryClient, err := discovery.NewDiscoveryClientForConfig(entry.Config)
+				if err != nil {
+					log.Fatalf("SRE source %q discovery client: %v", entry.Metadata.ID, err)
+				}
+				reader := collector.ClientReader{Dynamic: dynamicClient, Discovery: discoveryClient}
+				switch entry.Metadata.Role {
+				case sreconfig.RoleZonalCAPI:
+					collectors = append(collectors, collector.NewZonalCollector(entry.Metadata, reader, reader, collector.ZonalOptions{RequestTimeout: cfg.RequestTimeout}))
+				case sreconfig.RoleCentralIronCore:
+					collectors = append(collectors, collector.NewIronCoreCollector(entry.Metadata, reader, collector.IronCoreOptions{RequestTimeout: cfg.RequestTimeout}))
+				case sreconfig.RoleGardener:
+					collectors = append(collectors, collector.NewGardenerCollector(entry.Metadata, reader, reader, collector.GardenerOptions{RequestTimeout: cfg.RequestTimeout}))
+				}
+				store.PublishFailure(entry.Metadata.ID, time.Now().UTC(), 0, snapshot.ErrorNone, model.AccessUnknown)
+			}
+			scheduler := collector.NewScheduler(collectors, store, collector.SchedulerOptions{MaxConcurrent: cfg.MaxConcurrent, Interval: cfg.PollInterval, JitterFraction: 0.1})
+			go func() {
+				if err := scheduler.Run(context.Background()); err != nil && err != context.Canceled {
+					log.Printf("SRE collector scheduler stopped: %v", err)
+				}
+			}()
+			sreHandler = sreapi.New(store, cfg.StaleAfter).Router()
 			log.Printf("SRE Console enabled with %d read-only sources", registry.Count())
 		}
 	}
@@ -62,7 +99,7 @@ func main() {
 		log.Fatalf("dynamic client: %v", err)
 	}
 
-	srv := server.New(cs, k8sClient, dynClient, rootpkg.Frontend())
+	srv := server.NewWithSRE(cs, k8sClient, dynClient, rootpkg.Frontend(), sreHandler)
 	log.Printf("IronCore Dashboard listening on %s", *addr)
 	if err := srv.ListenAndServe(*addr); err != nil {
 		log.Fatalf("server error: %v", err)
