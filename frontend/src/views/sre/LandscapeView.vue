@@ -15,12 +15,12 @@ import { useSreLandscapeStore } from '@/stores/sre/landscape'
 const landscape=useSreLandscapeStore()
 const count=(...keys:string[])=>keys.reduce((total,key)=>total+(landscape.summary[key]??0),0)
 const metrics=computed(()=>[
-  {label:'Virtual machines',value:count('IronCoreVM','IronMachine'),to:'/sre/vms',icon:'mdi-server-outline'},
-  {label:'Zones',value:count('Zone'),to:'/sre/zones',icon:'mdi-map-marker-radius-outline'},
-  {label:'Shoots',value:count('Shoot'),to:'/sre/shoots',icon:'mdi-sprout-outline'},
-  {label:'Volumes',value:count('Volume'),to:'/sre/storage',icon:'mdi-database-outline'},
-  {label:'Load balancers',value:count('LoadBalancer'),to:'/sre/networking',icon:'mdi-scale-balance'},
-  {label:'Physical nodes',value:count('PhysicalNode'),to:'/sre/zones',icon:'mdi-server-security'},
+  {label:'Virtual machines',value:count('ironcore-vm','iron-machine','IronCoreVM','IronMachine'),to:'/sre/vms',icon:'mdi-server-outline'},
+  {label:'Zones',value:count('zone','Zone'),to:'/sre/zones',icon:'mdi-map-marker-radius-outline'},
+  {label:'Shoots',value:count('shoot','Shoot'),to:'/sre/shoots',icon:'mdi-sprout-outline'},
+  {label:'Volumes',value:count('volume','Volume'),to:'/sre/storage',icon:'mdi-database-outline'},
+  {label:'Load balancers',value:count('load-balancer','LoadBalancer'),to:'/sre/networking',icon:'mdi-scale-balance'},
+  {label:'Physical nodes',value:count('physical-node','PhysicalNode'),to:'/sre/zones',icon:'mdi-server-security'},
 ])
 </script>
 <style scoped>.metric-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}.metric{display:grid;grid-template-columns:auto 1fr;gap:4px 9px;padding:16px;border:1px solid var(--ic-border);border-radius:var(--ic-radius-md);background:var(--ic-surface);color:var(--ic-text);text-decoration:none}.metric strong{grid-column:2;font-size:24px}.zone-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.zone{display:grid;grid-template-columns:auto 1fr;gap:3px 9px;padding:14px;border:1px solid var(--ic-border);border-radius:8px;color:var(--ic-text);text-decoration:none}.zone span{grid-column:2;color:var(--ic-text-muted);font-size:12px}.empty{color:var(--ic-text-muted)}.signal{font-size:36px}@media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:600px){.metric-grid,.zone-grid{grid-template-columns:1fr 1fr}.metric{padding:12px}}</style>

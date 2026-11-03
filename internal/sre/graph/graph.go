@@ -85,7 +85,7 @@ func (graph *Graph) Incoming(key model.ResourceKey) []model.Relation {
 }
 
 func (graph *Graph) Observations() []model.Observation {
-	return append([]model.Observation(nil), graph.observations...)
+	return append([]model.Observation{}, graph.observations...)
 }
 
 func (graph *Graph) Resource(key model.ResourceKey) (model.Resource, bool) {

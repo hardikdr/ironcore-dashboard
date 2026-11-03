@@ -31,12 +31,16 @@ func (api *API) current() currentState {
 	state := currentState{aggregate: aggregate}
 	state.meta.GeneratedAt = aggregate.GeneratedAt
 	for _, source := range aggregate.Sources {
+		environment := ""
+		if len(source.Snapshot.Resources) != 0 {
+			environment = source.Snapshot.Resources[0].Provenance.Environment
+		}
 		if !source.Status.LastSuccess.IsZero() {
 			api.metrics.ObserveSnapshotAge(source.SourceID, time.Since(source.Status.LastSuccess))
 		}
 		state.resources = append(state.resources, source.Snapshot.Resources...)
 		state.meta.Sources = append(state.meta.Sources, SourceMeta{
-			ID: source.SourceID, CollectedAt: source.Status.LastSuccess, Freshness: source.Status.Freshness,
+			ID: source.SourceID, Environment: environment, CollectedAt: source.Status.LastSuccess, Freshness: source.Status.Freshness,
 			Access: source.Status.Access, Duration: source.Status.Duration, ErrorClass: string(source.Status.ErrorClass), ObjectCount: source.Snapshot.ObjectCounts,
 		})
 		if source.Snapshot.Partial || source.Status.Access != model.AccessOK || source.Status.Freshness != model.FreshnessFresh {
@@ -227,7 +231,7 @@ func (api *API) write(w http.ResponseWriter, request *http.Request, state curren
 			marker.markPartial()
 		}
 	}
-	etag := fmt.Sprintf(`W/"sre-%d"`, state.aggregate.Generation)
+	etag := fmt.Sprintf(`W/"sre-%s-%d"`, api.etagSeed, state.aggregate.Generation)
 	w.Header().Set("ETag", etag)
 	if request.Header.Get("If-None-Match") == etag {
 		w.WriteHeader(http.StatusNotModified)

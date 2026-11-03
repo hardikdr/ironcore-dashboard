@@ -1,0 +1,1 @@
+function r(t){if(!t)return"—";const e=Date.now()-new Date(t).getTime();return e<6e4?"just now":e<36e5?Math.floor(e/6e4)+"m ago":e<864e5?Math.floor(e/36e5)+"h ago":e<7*864e5?Math.floor(e/864e5)+"d ago":new Date(t).toLocaleDateString("en",{month:"short",day:"numeric"})}function n(t){return t?new Date(t).toLocaleString():"—"}export{n as a,r};

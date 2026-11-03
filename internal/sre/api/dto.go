@@ -21,6 +21,7 @@ type Meta struct {
 
 type SourceMeta struct {
 	ID          string            `json:"id"`
+	Environment string            `json:"environment,omitempty"`
 	CollectedAt time.Time         `json:"collectedAt,omitempty"`
 	Freshness   model.Freshness   `json:"freshness"`
 	Access      model.AccessState `json:"access"`

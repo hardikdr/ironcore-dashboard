@@ -26,6 +26,37 @@ type Server struct {
 	dyn      dynamic.Interface
 }
 
+// NewSREOnly serves the local fixture console without constructing or contacting
+// any Kubernetes client. End-user API routes are deliberately absent in this mode.
+func NewSREOnly(frontendFS fs.FS, sreHandler, metricsHandler http.Handler) *Server {
+	s := &Server{}
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(cors.Handler(cors.Options{AllowedOrigins: []string{"http://localhost:5173", "http://localhost:8080"}, AllowedMethods: []string{"GET", "OPTIONS"}, AllowedHeaders: []string{"Content-Type"}}))
+	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	if sreHandler != nil {
+		r.Mount("/api/sre/v1", sreHandler)
+	}
+	if metricsHandler != nil {
+		r.Get("/metrics", metricsHandler.ServeHTTP)
+	}
+	if frontendFS != nil {
+		fileServer := http.FileServer(http.FS(frontendFS))
+		r.Get("/*", func(w http.ResponseWriter, request *http.Request) {
+			if _, err := fs.Stat(frontendFS, request.URL.Path[1:]); err != nil {
+				request.URL.Path = "/"
+			}
+			fileServer.ServeHTTP(w, request)
+		})
+	}
+	s.router = r
+	return s
+}
+
 func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dynamic.Interface, frontendFS fs.FS) *Server {
 	return NewWithSRE(cs, k8sClient, dynClient, frontendFS, nil)
 }

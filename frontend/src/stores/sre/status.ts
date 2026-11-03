@@ -9,7 +9,7 @@ export const useSreStatusStore = defineStore('sre-status', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const environment = ref('all')
-  const environments = computed(() => ['all', ...new Set(sources.value.map(source => source.id.split('/')[0]).filter(Boolean))])
+  const environments = computed(() => ['all', ...new Set(sources.value.map(source => source.environment).filter((value): value is string => Boolean(value)))])
   const freshness = computed(() => meta.value?.partial ? 'Partial' : sources.value.some(source => source.freshness !== 'fresh') ? 'Stale' : 'Fresh')
 
   async function load(signal?: AbortSignal) {

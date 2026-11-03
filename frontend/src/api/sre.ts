@@ -2,6 +2,7 @@ const BASE = '/api/sre/v1'
 
 export interface SreSourceMeta {
   id: string
+  environment?: string
   collectedAt?: string
   freshness: 'fresh' | 'stale' | 'unknown' | string
   access: 'ok' | 'denied' | 'unreachable' | 'unsupported' | 'not-configured' | 'unknown' | string

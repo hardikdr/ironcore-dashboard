@@ -90,6 +90,16 @@ make build
 ./bin/ironcore-dashboard --help
 ```
 
+## Local SRE Console
+
+Run the SRE dashboard entirely from sanitized recorded fixtures—no Kubernetes cluster or GitHub access is used:
+
+```bash
+go run ./cmd/server --addr 127.0.0.1:8181 --sre-fixture-dir internal/sre/testdata
+```
+
+Open `http://127.0.0.1:8181/sre/landscape`. The SRE API is GET-only and fixture mode does not enable the user-console mutation API. See `docs/sre/rollout.md` for validation, staged rollout, access-log audit, and rollback.
+
 ## License
 
 Apache 2.0

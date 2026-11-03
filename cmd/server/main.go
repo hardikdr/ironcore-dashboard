@@ -14,6 +14,7 @@ import (
 	sreapi "github.com/ironcore-dev/ironcore-dashboard/internal/sre/api"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/collector"
 	sreconfig "github.com/ironcore-dev/ironcore-dashboard/internal/sre/config"
+	srefixture "github.com/ironcore-dev/ironcore-dashboard/internal/sre/fixture"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/model"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/observability"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/snapshot"
@@ -29,10 +30,30 @@ func main() {
 	addr := flag.String("addr", ":8080", "HTTP listen address")
 	kubeconfig := flag.String("kubeconfig", "", "path to kubeconfig (empty = in-cluster)")
 	sreConfig := flag.String("sre-config", "", "path to read-only multi-source SRE configuration (empty = disabled)")
+	sreFixtureDir := flag.String("sre-fixture-dir", "", "path to sanitized SRE JSON fixtures for local-only mode (mutually exclusive with --sre-config)")
 	flag.Parse()
+	if *sreConfig != "" && *sreFixtureDir != "" {
+		log.Fatal("--sre-config and --sre-fixture-dir are mutually exclusive")
+	}
 
 	var sreHandler http.Handler
 	var metricsHandler http.Handler
+	if *sreFixtureDir != "" {
+		store, err := srefixture.LoadDir(*sreFixtureDir)
+		if err != nil {
+			log.Fatalf("SRE fixtures: %v", err)
+		}
+		metrics := observability.NewMetrics()
+		sreHandler = sreapi.NewWithMetrics(store, 2*time.Minute, metrics).Router()
+		metricsHandler = metrics.Handler()
+		log.Printf("SRE Console fixture mode enabled from sanitized local snapshots")
+		srv := server.NewSREOnly(rootpkg.Frontend(), sreHandler, metricsHandler)
+		log.Printf("IronCore Dashboard local fixture server listening on %s", *addr)
+		if err := srv.ListenAndServe(*addr); err != nil {
+			log.Fatalf("server error: %v", err)
+		}
+		return
+	}
 	if *sreConfig != "" {
 		cfg, err := sreconfig.Load(*sreConfig)
 		if err != nil {

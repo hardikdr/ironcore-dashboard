@@ -1,7 +1,9 @@
 package api
 
 import (
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"time"
@@ -19,6 +21,7 @@ type API struct {
 	store      *snapshot.Store
 	staleAfter time.Duration
 	metrics    *observability.Metrics
+	etagSeed   string
 }
 
 func New(store *snapshot.Store, staleAfter time.Duration) *API {
@@ -32,7 +35,11 @@ func NewWithMetrics(store *snapshot.Store, staleAfter time.Duration, metrics *ob
 	if metrics == nil {
 		metrics = observability.NewMetrics()
 	}
-	return &API{store: store, staleAfter: staleAfter, metrics: metrics}
+	seed := make([]byte, 8)
+	if _, err := rand.Read(seed); err != nil {
+		seed = []byte(fmt.Sprintf("%016x", time.Now().UnixNano()))
+	}
+	return &API{store: store, staleAfter: staleAfter, metrics: metrics, etagSeed: hex.EncodeToString(seed)}
 }
 
 func (api *API) Router() *chi.Mux {

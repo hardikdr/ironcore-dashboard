@@ -146,6 +146,29 @@ func TestAPIRoutesRecordBoundedMetrics(t *testing.T) {
 	}
 }
 
+func TestObservationsEncodeEmptyCollectionAsArray(t *testing.T) {
+	t.Parallel()
+	response := httptest.NewRecorder()
+	New(snapshot.NewStore(), time.Minute).Router().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/observations", nil))
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"data":[]`) {
+		t.Fatalf("empty observations response = %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestETagDoesNotCollideAcrossServerInstances(t *testing.T) {
+	t.Parallel()
+	store, _ := apiTestStore(t)
+	request := func(router http.Handler) string {
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/status", nil))
+		return response.Header().Get("ETag")
+	}
+	first, second := request(New(store, time.Minute).Router()), request(New(store, time.Minute).Router())
+	if first == "" || first == second {
+		t.Fatalf("instance ETags = %q and %q", first, second)
+	}
+}
+
 func apiTestStore(t *testing.T) (*snapshot.Store, model.Resource) {
 	t.Helper()
 	now := time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)
