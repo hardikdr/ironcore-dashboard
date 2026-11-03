@@ -27,6 +27,11 @@ export interface SreResource {
   state?: string
   health?: string
   labels?: Record<string, string>
+  annotations?: Record<string, string>
+  providerId?: string
+  addresses?: string[]
+  conditions?: Array<{ type: string; status: string; reason?: string; message?: string }>
+  sanitized?: Record<string, unknown>
   relationships?: unknown[]
 }
 
@@ -52,6 +57,8 @@ export interface SreGap { area: string; state: string; message: string }
 export interface SreVMSummary { vm: SreResource; localization: string; facts: SreFact[]; gaps: SreGap[] }
 export interface SreRelation { from: string; to: string; type: string; evidence: string; fieldPath: string; confidence: string }
 export interface SreGraph { resources: SreResource[]; relations: SreRelation[]; truncated: boolean }
+export interface SreZoneSummary { zone: SreResource; state: string; managementOnly: boolean; managementNodes: number; computeNodes: number; storageNodes: number; machinePools: number; volumePools: number; hostedVms: number; dependentShoots: number; facts: SreFact[]; gaps: SreGap[] }
+export interface SreShootSummary { shoot: SreResource; workerVms: number; workerGroups: number; relationConfidence: string; facts: SreFact[]; gaps: SreGap[] }
 
 async function get<T>(path: string, signal?: AbortSignal): Promise<SreEnvelope<T>> {
   const response = await fetch(`${BASE}${path}`, signal ? { signal } : {})
@@ -75,8 +82,12 @@ export const sreApi = {
   summary: (environment?: string, signal?: AbortSignal) => get<Record<string, number>>(`/summary${query({ environment })}`, signal),
   search: (value: string, signal?: AbortSignal) => get<SreSearchResult[]>(`/search${query({ q: value, limit: 25 })}`, signal),
   zones: (environment?: string, signal?: AbortSignal) => get<SreResourceDTO[]>(`/zones${query({ environment })}`, signal),
+  zone: (name: string, signal?: AbortSignal) => get<SreZoneSummary>(`/zones/${encodeURIComponent(name)}`, signal),
+  node: (id: string, signal?: AbortSignal) => get<SreResourceDTO>(`/nodes/${encodeURIComponent(id)}`, signal),
   vms: (filters: { environment?: string; state?: string; continue?: string } = {}, signal?: AbortSignal) => get<SreResourceDTO[]>(`/vms${query({ ...filters, limit: 100 })}`, signal),
   vm: (id: string, signal?: AbortSignal) => get<SreVMSummary>(`/vms/${encodeURIComponent(id)}`, signal),
+  shoots: (environment?: string, signal?: AbortSignal) => get<SreResourceDTO[]>(`/shoots${query({ environment, limit: 100 })}`, signal),
+  shoot: (id: string, signal?: AbortSignal) => get<SreShootSummary>(`/shoots/${encodeURIComponent(id)}`, signal),
   graph: (id: string, signal?: AbortSignal) => get<SreGraph>(`/graph${query({ root: id, depth: 4, limit: 300 })}`, signal),
   sanitized: (id: string, signal?: AbortSignal) => get<{ id: string; details: unknown }>(`/resources/${encodeURIComponent(id)}/sanitized`, signal),
   observations: (signal?: AbortSignal) => get<SreObservation[]>('/observations', signal),
