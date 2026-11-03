@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 
+	rootpkg "github.com/ironcore-dev/ironcore-dashboard"
 	ironclient "github.com/ironcore-dev/ironcore-dashboard/internal/client"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/server"
-	rootpkg "github.com/ironcore-dev/ironcore-dashboard"
+	sreconfig "github.com/ironcore-dev/ironcore-dashboard/internal/sre/config"
+	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/source"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -14,9 +17,24 @@ import (
 )
 
 func main() {
-	addr       := flag.String("addr", ":8080", "HTTP listen address")
+	addr := flag.String("addr", ":8080", "HTTP listen address")
 	kubeconfig := flag.String("kubeconfig", "", "path to kubeconfig (empty = in-cluster)")
+	sreConfig := flag.String("sre-config", "", "path to read-only multi-source SRE configuration (empty = disabled)")
 	flag.Parse()
+
+	if *sreConfig != "" {
+		cfg, err := sreconfig.Load(*sreConfig)
+		if err != nil {
+			log.Fatalf("SRE configuration: %v", err)
+		}
+		registry, err := source.NewRegistry(context.Background(), cfg)
+		if err != nil {
+			log.Fatalf("SRE source registry: %v", err)
+		}
+		if cfg.Enabled {
+			log.Printf("SRE Console enabled with %d read-only sources", registry.Count())
+		}
+	}
 
 	// IronCore clientset
 	cs, err := ironclient.New(*kubeconfig)
