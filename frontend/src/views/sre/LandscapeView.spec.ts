@@ -16,6 +16,7 @@ describe('LandscapeView', () => {
       RouterLink: RouterLinkStub,
       AppPage: { template: '<main><slot /><slot name="actions" /></main>' },
       VAlert: { props: ['title'], template: '<aside>{{ title }}<slot /></aside>' },
+      SnapshotStamp: { template: '<span>snapshot</span>' },
       VIcon: passthrough, VCard: passthrough, VCardTitle: passthrough, VCardSubtitle: passthrough,
       VCardText: passthrough, VRow: passthrough, VCol: passthrough, VBtn: passthrough,
     } } })

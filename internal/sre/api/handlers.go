@@ -31,6 +31,9 @@ func (api *API) current() currentState {
 	state := currentState{aggregate: aggregate}
 	state.meta.GeneratedAt = aggregate.GeneratedAt
 	for _, source := range aggregate.Sources {
+		if !source.Status.LastSuccess.IsZero() {
+			api.metrics.ObserveSnapshotAge(source.SourceID, time.Since(source.Status.LastSuccess))
+		}
 		state.resources = append(state.resources, source.Snapshot.Resources...)
 		state.meta.Sources = append(state.meta.Sources, SourceMeta{
 			ID: source.SourceID, CollectedAt: source.Status.LastSuccess, Freshness: source.Status.Freshness,
@@ -78,6 +81,7 @@ func (api *API) search(w http.ResponseWriter, request *http.Request) {
 	limit := boundedInt(request.URL.Query().Get("limit"), 50, 1, 200)
 	types := splitCSV(request.URL.Query().Get("types"))
 	results := state.search.Search(query, search.Options{Types: types, Limit: limit})
+	api.metrics.ObserveSearchSize(len(results))
 	data := make([]SearchDTO, 0, len(results))
 	for _, result := range results {
 		data = append(data, SearchDTO{ID: EncodeID(result.Resource.Key), Resource: publicResource(result.Resource), MatchedField: result.Match.Field, MatchKind: string(result.Match.Kind), Fragment: result.Match.Fragment, Ranges: result.Match.Ranges})
@@ -196,6 +200,7 @@ func (api *API) graph(w http.ResponseWriter, request *http.Request) {
 	depth := boundedInt(request.URL.Query().Get("depth"), 3, 1, graph.MaxTraversalDepth)
 	limit := boundedInt(request.URL.Query().Get("limit"), 200, 1, graph.MaxTraversalNodes)
 	result := state.graph.Traverse(root, depth, limit)
+	api.metrics.ObserveGraphSize(len(result.Resources), len(result.Relations))
 	if len(result.Resources) == 0 {
 		writeError(w, http.StatusNotFound, "root not found")
 		return
@@ -217,6 +222,11 @@ func (api *API) sanitized(w http.ResponseWriter, request *http.Request) {
 }
 
 func (api *API) write(w http.ResponseWriter, request *http.Request, state currentState, status int, data any) {
+	if state.meta.Partial {
+		if marker, ok := w.(interface{ markPartial() }); ok {
+			marker.markPartial()
+		}
+	}
 	etag := fmt.Sprintf(`W/"sre-%d"`, state.aggregate.Generation)
 	w.Header().Set("ETag", etag)
 	if request.Header.Get("If-None-Match") == etag {

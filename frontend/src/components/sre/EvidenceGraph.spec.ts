@@ -12,7 +12,7 @@ describe('EvidenceGraph', () => {
       relations: [{ from: 'a', to: 'b', type: 'has-nic', evidence: 'uid-reference', fieldPath: '.spec.machineRef', confidence: 'proven' }],
       truncated: false,
     }
-    const wrapper = mount(EvidenceGraph, { props: { graph, rootKey: 'a' }, global: { stubs: { TopologyRelations: { template: '<table aria-label="Relationship table"><tbody><tr><td>fallback</td></tr></tbody></table>' }, VChip: { template: '<span><slot /></span>' } } } })
+    const wrapper = mount(EvidenceGraph, { props: { graph, rootKey: 'a' }, global: { stubs: { TopologyRelations: { template: '<table aria-label="Relationship table"><tbody><tr><td>fallback</td></tr></tbody></table>' }, VChip: { template: '<span><slot /></span>' }, VAlert: { template: '<aside><slot /></aside>' } } } })
     expect(wrapper.findAll('[data-edge]').length).toBe(1)
     expect(wrapper.text()).toContain('vm-a')
     expect(wrapper.text()).toContain('nic-a')

@@ -3,11 +3,13 @@ package collector
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"math/rand/v2"
 	"sync"
 	"time"
 
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/model"
+	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/observability"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/snapshot"
 )
 
@@ -16,6 +18,8 @@ type SchedulerOptions struct {
 	Interval       time.Duration
 	JitterFraction float64
 	Random         func() float64
+	Metrics        *observability.Metrics
+	Logger         *slog.Logger
 }
 
 type Scheduler struct {
@@ -71,6 +75,10 @@ func (scheduler *Scheduler) Poll(ctx context.Context) error {
 					class, access = collectionErr.Class, collectionErr.Access
 				}
 				scheduler.store.PublishFailure(current.SourceID(), completed.UTC(), duration, class, access)
+				scheduler.options.Metrics.ObserveCollection(current.SourceID(), false, duration, nil)
+				if scheduler.options.Logger != nil {
+					scheduler.options.Logger.Warn("SRE collection failed", "source_id", current.SourceID(), "phase", "collect", "duration_ms", duration.Milliseconds(), "error_class", class, "access", access)
+				}
 				errorsByCollector <- err
 				return
 			}
@@ -79,6 +87,10 @@ func (scheduler *Scheduler) Poll(ctx context.Context) error {
 				collectedAt = completed.UTC()
 			}
 			scheduler.store.PublishSuccess(current.SourceID(), collectedAt, duration, result)
+			scheduler.options.Metrics.ObserveCollection(current.SourceID(), true, duration, result.ObjectCounts)
+			if scheduler.options.Logger != nil {
+				scheduler.options.Logger.Info("SRE collection completed", "source_id", current.SourceID(), "phase", "collect", "duration_ms", duration.Milliseconds(), "object_count", resourceCount(result.ObjectCounts))
+			}
 		}()
 	}
 	group.Wait()
@@ -88,6 +100,14 @@ func (scheduler *Scheduler) Poll(ctx context.Context) error {
 		collected = append(collected, err)
 	}
 	return errors.Join(collected...)
+}
+
+func resourceCount(counts map[string]int) int {
+	total := 0
+	for _, count := range counts {
+		total += count
+	}
+	return total
 }
 
 func (scheduler *Scheduler) Run(ctx context.Context) error {

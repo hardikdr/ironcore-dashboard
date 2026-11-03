@@ -31,6 +31,10 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dyna
 }
 
 func NewWithSRE(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dynamic.Interface, frontendFS fs.FS, sreHandler http.Handler) *Server {
+	return NewWithSREMetrics(cs, k8sClient, dynClient, frontendFS, sreHandler, nil)
+}
+
+func NewWithSREMetrics(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dynamic.Interface, frontendFS fs.FS, sreHandler, metricsHandler http.Handler) *Server {
 	s := &Server{ironcore: cs, k8s: k8sClient, dyn: dynClient}
 	r := chi.NewRouter()
 
@@ -130,6 +134,9 @@ func NewWithSRE(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClie
 
 	if sreHandler != nil {
 		r.Mount("/api/sre/v1", sreHandler)
+	}
+	if metricsHandler != nil {
+		r.Get("/metrics", metricsHandler.ServeHTTP)
 	}
 
 	// Serve built Vue SPA for all other routes

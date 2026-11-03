@@ -1,8 +1,11 @@
 package collector
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -81,6 +84,50 @@ func TestSchedulerDelayIncludesBoundedJitter(t *testing.T) {
 		if got != want {
 			t.Fatalf("delay = %s, want %s", got, want)
 		}
+	}
+}
+
+func TestSlowSourceDoesNotBlockOtherCollectors(t *testing.T) {
+	t.Parallel()
+	store := snapshot.NewStore()
+	started, release := make(chan string, 1), make(chan struct{})
+	slow := &blockingCollector{id: "slow", started: started, release: release, active: &atomic.Int32{}, maximum: &atomic.Int32{}}
+	fast := &sequenceCollector{id: "fast", outcomes: []collectorOutcome{{snapshot: snapshot.Snapshot{SourceID: "fast", ObjectCounts: map[string]int{"IronCoreVM": 1}}}}}
+	scheduler := NewScheduler([]Collector{slow, fast}, store, SchedulerOptions{MaxConcurrent: 2, Interval: time.Minute})
+	done := make(chan error, 1)
+	go func() { done <- scheduler.Poll(context.Background()) }()
+	<-started
+	deadline := time.Now().Add(time.Second)
+	for {
+		if view, ok := store.Read("fast", time.Now(), time.Minute); ok && view.Snapshot.ObjectCounts["IronCoreVM"] == 1 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("fast collector was blocked by slow source")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	close(release)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestStructuredCollectionLogsExcludePayloads(t *testing.T) {
+	t.Parallel()
+	var output bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&output, nil))
+	current := &sequenceCollector{id: "safe-source", outcomes: []collectorOutcome{{snapshot: snapshot.Snapshot{SourceID: "safe-source", ObjectCounts: map[string]int{"IronCoreVM": 1}, Warnings: []string{"credential-do-not-log"}}}}}
+	scheduler := NewScheduler([]Collector{current}, snapshot.NewStore(), SchedulerOptions{Logger: logger})
+	if err := scheduler.Poll(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	logged := output.String()
+	if !strings.Contains(logged, `"source_id":"safe-source"`) || !strings.Contains(logged, `"phase":"collect"`) {
+		t.Fatalf("structured fields missing: %s", logged)
+	}
+	if strings.Contains(logged, "credential-do-not-log") {
+		t.Fatalf("collector payload leaked to logs: %s", logged)
 	}
 }
 

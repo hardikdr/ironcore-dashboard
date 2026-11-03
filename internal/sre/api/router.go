@@ -3,11 +3,13 @@ package api
 import (
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/model"
+	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/observability"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/snapshot"
 )
 
@@ -16,18 +18,27 @@ const MaxResponseBytes = 2 << 20
 type API struct {
 	store      *snapshot.Store
 	staleAfter time.Duration
+	metrics    *observability.Metrics
 }
 
 func New(store *snapshot.Store, staleAfter time.Duration) *API {
+	return NewWithMetrics(store, staleAfter, observability.NewMetrics())
+}
+
+func NewWithMetrics(store *snapshot.Store, staleAfter time.Duration, metrics *observability.Metrics) *API {
 	if staleAfter <= 0 {
 		staleAfter = 2 * time.Minute
 	}
-	return &API{store: store, staleAfter: staleAfter}
+	if metrics == nil {
+		metrics = observability.NewMetrics()
+	}
+	return &API{store: store, staleAfter: staleAfter, metrics: metrics}
 }
 
 func (api *API) Router() *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.Timeout(10 * time.Second))
+	router.Use(api.observeRequests)
 	router.Get("/status", api.status)
 	router.Get("/sources", api.sources)
 	router.Get("/summary", api.summary)
@@ -46,6 +57,41 @@ func (api *API) Router() *chi.Mux {
 	router.Get("/graph", api.graph)
 	router.Get("/resources/{id}/sanitized", api.sanitized)
 	return router
+}
+
+type metricWriter struct {
+	http.ResponseWriter
+	status  int
+	partial bool
+}
+
+func (writer *metricWriter) WriteHeader(status int) {
+	writer.status = status
+	writer.ResponseWriter.WriteHeader(status)
+}
+func (writer *metricWriter) Write(body []byte) (int, error) {
+	if writer.status == 0 {
+		writer.status = http.StatusOK
+	}
+	return writer.ResponseWriter.Write(body)
+}
+func (writer *metricWriter) markPartial() { writer.partial = true }
+
+func (api *API) observeRequests(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		started := time.Now()
+		writer := &metricWriter{ResponseWriter: w}
+		next.ServeHTTP(writer, request)
+		status := writer.status
+		if status == 0 {
+			status = http.StatusOK
+		}
+		route := chi.RouteContext(request.Context()).RoutePattern()
+		if route == "" {
+			route = "/unknown"
+		}
+		api.metrics.ObserveAPI(route, status, time.Since(started), writer.partial)
+	})
 }
 
 func EncodeID(key model.ResourceKey) string {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/model"
+	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/observability"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/snapshot"
 )
 
@@ -122,6 +123,26 @@ func TestGraphCapsDepthAndNodeLimit(t *testing.T) {
 	}
 	if response.Body.Len() > MaxResponseBytes {
 		t.Fatalf("graph response exceeded cap: %d", response.Body.Len())
+	}
+}
+
+func TestAPIRoutesRecordBoundedMetrics(t *testing.T) {
+	t.Parallel()
+	store, _ := apiTestStore(t)
+	metrics := observability.NewMetrics()
+	router := NewWithMetrics(store, time.Minute, metrics).Router()
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/search?q=vm-a", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("search status = %d", response.Code)
+	}
+	metricResponse := httptest.NewRecorder()
+	metrics.Handler().ServeHTTP(metricResponse, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	body := metricResponse.Body.String()
+	for _, expected := range []string{`route="/search"`, "ironcore_sre_partial_responses_total 1", "ironcore_sre_search_results 1", "ironcore_sre_snapshot_age_seconds"} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("metrics missing %q: %s", expected, body)
+		}
 	}
 }
 

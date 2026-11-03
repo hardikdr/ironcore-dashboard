@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/collector"
 	sreconfig "github.com/ironcore-dev/ironcore-dashboard/internal/sre/config"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/model"
+	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/observability"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/snapshot"
 	"github.com/ironcore-dev/ironcore-dashboard/internal/sre/source"
 	"k8s.io/client-go/discovery"
@@ -30,6 +32,7 @@ func main() {
 	flag.Parse()
 
 	var sreHandler http.Handler
+	var metricsHandler http.Handler
 	if *sreConfig != "" {
 		cfg, err := sreconfig.Load(*sreConfig)
 		if err != nil {
@@ -40,6 +43,7 @@ func main() {
 			log.Fatalf("SRE source registry: %v", err)
 		}
 		if cfg.Enabled {
+			metrics := observability.NewMetrics()
 			store := snapshot.NewStore()
 			collectors := make([]collector.Collector, 0, registry.Count())
 			for _, entry := range registry.Entries() {
@@ -62,13 +66,14 @@ func main() {
 				}
 				store.PublishFailure(entry.Metadata.ID, time.Now().UTC(), 0, snapshot.ErrorNone, model.AccessUnknown)
 			}
-			scheduler := collector.NewScheduler(collectors, store, collector.SchedulerOptions{MaxConcurrent: cfg.MaxConcurrent, Interval: cfg.PollInterval, JitterFraction: 0.1})
+			scheduler := collector.NewScheduler(collectors, store, collector.SchedulerOptions{MaxConcurrent: cfg.MaxConcurrent, Interval: cfg.PollInterval, JitterFraction: 0.1, Metrics: metrics, Logger: slog.Default()})
 			go func() {
 				if err := scheduler.Run(context.Background()); err != nil && err != context.Canceled {
 					log.Printf("SRE collector scheduler stopped: %v", err)
 				}
 			}()
-			sreHandler = sreapi.New(store, cfg.StaleAfter).Router()
+			sreHandler = sreapi.NewWithMetrics(store, cfg.StaleAfter, metrics).Router()
+			metricsHandler = metrics.Handler()
 			log.Printf("SRE Console enabled with %d read-only sources", registry.Count())
 		}
 	}
@@ -99,7 +104,7 @@ func main() {
 		log.Fatalf("dynamic client: %v", err)
 	}
 
-	srv := server.NewWithSRE(cs, k8sClient, dynClient, rootpkg.Frontend(), sreHandler)
+	srv := server.NewWithSREMetrics(cs, k8sClient, dynClient, rootpkg.Frontend(), sreHandler, metricsHandler)
 	log.Printf("IronCore Dashboard listening on %s", *addr)
 	if err := srv.ListenAndServe(*addr); err != nil {
 		log.Fatalf("server error: %v", err)
