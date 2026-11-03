@@ -136,6 +136,11 @@ func cloneResource(input model.Resource) model.Resource {
 	output.References = append([]model.ObjectReference(nil), input.References...)
 	output.OwnerRefs = append([]model.ObjectReference(nil), input.OwnerRefs...)
 	output.Selector = cloneStringMap(input.Selector)
+	output.SelectorExpressions = make([]model.SelectorRequirement, len(input.SelectorExpressions))
+	for index := range input.SelectorExpressions {
+		output.SelectorExpressions[index] = input.SelectorExpressions[index]
+		output.SelectorExpressions[index].Values = append([]string(nil), input.SelectorExpressions[index].Values...)
+	}
 	if input.Sanitized != nil {
 		output.Sanitized = make(map[string]any, len(input.Sanitized))
 		for key, value := range input.Sanitized {

@@ -95,21 +95,29 @@ type Condition struct {
 }
 
 type Resource struct {
-	Key         ResourceKey       `json:"key"`
-	Type        string            `json:"type"`
-	Provenance  Provenance        `json:"provenance"`
-	Health      HealthState       `json:"health"`
-	State       string            `json:"state,omitempty"`
-	Labels      map[string]string `json:"labels,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty"`
-	ProviderID  string            `json:"providerId,omitempty"`
-	Addresses   []string          `json:"addresses,omitempty"`
-	Aliases     []string          `json:"aliases,omitempty"`
-	Conditions  []Condition       `json:"conditions,omitempty"`
-	References  []ObjectReference `json:"references,omitempty"`
-	OwnerRefs   []ObjectReference `json:"ownerReferences,omitempty"`
-	Selector    map[string]string `json:"selector,omitempty"`
-	Sanitized   map[string]any    `json:"sanitized,omitempty"`
+	Key                 ResourceKey           `json:"key"`
+	Type                string                `json:"type"`
+	Provenance          Provenance            `json:"provenance"`
+	CreatedAt           time.Time             `json:"createdAt,omitempty"`
+	Health              HealthState           `json:"health"`
+	State               string                `json:"state,omitempty"`
+	Labels              map[string]string     `json:"labels,omitempty"`
+	Annotations         map[string]string     `json:"annotations,omitempty"`
+	ProviderID          string                `json:"providerId,omitempty"`
+	Addresses           []string              `json:"addresses,omitempty"`
+	Aliases             []string              `json:"aliases,omitempty"`
+	Conditions          []Condition           `json:"conditions,omitempty"`
+	References          []ObjectReference     `json:"references,omitempty"`
+	OwnerRefs           []ObjectReference     `json:"ownerReferences,omitempty"`
+	Selector            map[string]string     `json:"selector,omitempty"`
+	SelectorExpressions []SelectorRequirement `json:"selectorExpressions,omitempty"`
+	Sanitized           map[string]any        `json:"sanitized,omitempty"`
+}
+
+type SelectorRequirement struct {
+	Key      string   `json:"key"`
+	Operator string   `json:"operator"`
+	Values   []string `json:"values,omitempty"`
 }
 
 type Relation struct {

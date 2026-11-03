@@ -122,6 +122,7 @@ type fakeReader struct {
 	pages           map[string][]*unstructured.UnstructuredList
 	pageIndexes     map[string]int
 	listError       error
+	listErrors      map[string]error
 	supported       map[schema.GroupVersionResource]bool
 	discoveryErrors map[schema.GroupVersionResource]error
 	calls           []listCall
@@ -135,6 +136,9 @@ func (reader *fakeReader) List(ctx context.Context, gvr schema.GroupVersionResou
 		return nil, reader.listError
 	}
 	key := listKey(gvr, namespace)
+	if err := reader.listErrors[key]; err != nil {
+		return nil, err
+	}
 	if reader.pageIndexes == nil {
 		reader.pageIndexes = make(map[string]int)
 	}
