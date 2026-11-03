@@ -1,0 +1,30 @@
+:root {
+  --ic-canvas: #f6f7f9;
+  --ic-surface: #fff;
+  --ic-surface-raised: #fff;
+  --ic-border: #dfe3e8;
+  --ic-text: #17202a;
+  --ic-text-muted: #5f6b7a;
+  --ic-focus: #4f46e5;
+  --ic-radius-sm: 4px;
+  --ic-radius-md: 8px;
+  --ic-radius-lg: 12px;
+  --ic-space-1: 4px;
+  --ic-space-2: 8px;
+  --ic-space-3: 12px;
+  --ic-space-4: 16px;
+  --ic-space-5: 20px;
+  --ic-space-6: 24px;
+  --ic-space-7: 32px;
+  --ic-space-8: 40px;
+}
+
+.v-theme--dark {
+  --ic-canvas: #111318;
+  --ic-surface: #191c23;
+  --ic-surface-raised: #222630;
+  --ic-border: #343944;
+  --ic-text: #f1f5f9;
+  --ic-text-muted: #aab2c0;
+  --ic-focus: #a5b4fc;
+}

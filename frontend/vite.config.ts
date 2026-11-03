@@ -17,5 +17,11 @@ export default defineConfig({
   },
   build: {
     outDir: '../dist/frontend'
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    css: true
   }
 })
