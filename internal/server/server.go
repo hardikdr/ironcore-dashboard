@@ -129,7 +129,7 @@ func New(cs versioned.Interface, k8sClient *kubernetes.Clientset, dynClient dyna
 		fileServer := http.FileServer(http.FS(frontendFS))
 		r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 			// SPA fallback: serve index.html for unknown routes so vue-router handles them
-			_, statErr := frontendFS.(fs.StatFS).Stat(r.URL.Path[1:])
+			_, statErr := fs.Stat(frontendFS, r.URL.Path[1:])
 			if statErr != nil {
 				r.URL.Path = "/"
 			}

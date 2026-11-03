@@ -5,15 +5,15 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	commonv1alpha1     "github.com/ironcore-dev/ironcore/api/common/v1alpha1"
-	computev1alpha1    "github.com/ironcore-dev/ironcore/api/compute/v1alpha1"
-	corev1alpha1       "github.com/ironcore-dev/ironcore/api/core/v1alpha1"
+	commonv1alpha1 "github.com/ironcore-dev/ironcore/api/common/v1alpha1"
+	computev1alpha1 "github.com/ironcore-dev/ironcore/api/compute/v1alpha1"
+	corev1alpha1 "github.com/ironcore-dev/ironcore/api/core/v1alpha1"
 	networkingv1alpha1 "github.com/ironcore-dev/ironcore/api/networking/v1alpha1"
-	storagev1alpha1    "github.com/ironcore-dev/ironcore/api/storage/v1alpha1"
-	versioned          "github.com/ironcore-dev/ironcore/client-go/ironcore/versioned"
-	corev1             "k8s.io/api/core/v1"
+	storagev1alpha1 "github.com/ironcore-dev/ironcore/api/storage/v1alpha1"
+	versioned "github.com/ironcore-dev/ironcore/client-go/ironcore/versioned"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1             "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type MachineHandler struct{ cs versioned.Interface }
@@ -88,6 +88,7 @@ func (h *MachineHandler) Create(w http.ResponseWriter, r *http.Request) {
 		ObjectMeta: metav1.ObjectMeta{Name: req.Name, Namespace: ns},
 		Spec: computev1alpha1.MachineSpec{
 			MachineClassRef: corev1.LocalObjectReference{Name: req.MachineClass},
+			Image:           req.Image,
 			Power:           power,
 			Volumes:         volumes,
 			NetworkInterfaces: []computev1alpha1.NetworkInterface{
