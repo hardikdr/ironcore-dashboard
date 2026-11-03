@@ -51,6 +51,11 @@ func (normalizer *IronCore) Normalize(gvr schema.GroupVersionResource, object *u
 	resource.Addresses = normalizeAddresses(object.Object)
 	resource.References = normalizeReferences(gvr.Resource, object.Object, object.GetNamespace())
 	resource.Selector, resource.SelectorExpressions = normalizeSelector(object.Object)
+	if gvr.Resource == "volumes" {
+		if selector, found, _ := unstructured.NestedStringMap(object.Object, "spec", "volumePoolSelector"); found {
+			resource.Selector = selector
+		}
+	}
 	resource.Sanitized = normalizeSafeDetails(gvr.Resource, object.Object)
 	return resource, nil
 }

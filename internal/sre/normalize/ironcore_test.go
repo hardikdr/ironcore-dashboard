@@ -127,6 +127,25 @@ func TestIronCoreNormalizerPreservesSelectorExpressions(t *testing.T) {
 	}
 }
 
+func TestIronCoreNormalizerPreservesVolumePoolSelector(t *testing.T) {
+	t.Parallel()
+
+	normalizer := NewIronCore(config.Source{ID: "canary-ironcore", Environment: "canary", Role: config.RoleCentralIronCore}, time.Now())
+	object := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "storage.ironcore.dev/v1alpha1", "kind": "Volume",
+		"metadata": map[string]any{"namespace": "tenant", "name": "volume-a", "uid": "volume-a-uid"},
+		"spec":     map[string]any{"volumePoolSelector": map[string]any{"topology.ironcore.dev/zone": "wdf4b"}},
+	}}
+
+	got, err := normalizer.Normalize(schema.GroupVersionResource{Group: "storage.ironcore.dev", Version: "v1alpha1", Resource: "volumes"}, object)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Selector["topology.ironcore.dev/zone"] != "wdf4b" {
+		t.Fatalf("volume selector = %#v", got.Selector)
+	}
+}
+
 func hasReference(references []model.ObjectReference, want string) bool {
 	for _, ref := range references {
 		if ref.Kind+":"+ref.Name == want {

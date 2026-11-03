@@ -31,7 +31,16 @@
       "health": "healthy",
       "addresses": ["10.20.0.17"],
       "labels": {"kubernetes.io/cluster": "shoot--feos--fecode"},
-      "references": [{"group": "compute.ironcore.dev", "kind": "IronCoreVM", "namespace": "shoot--feos--fecode", "name": "worker-a-0", "uid": "vm-canary-001", "fieldPath": ".spec.machineRef"}]
+      "references": [
+        {"group": "compute.ironcore.dev", "kind": "IronCoreVM", "namespace": "shoot--feos--fecode", "name": "worker-a-0", "uid": "vm-canary-001", "fieldPath": ".spec.machineRef"},
+        {"group": "networking.ironcore.dev", "kind": "Network", "namespace": "shoot--feos--fecode", "name": "shoot-network", "fieldPath": ".spec.networkRef.name"}
+      ]
+    },
+    {
+      "key": "canary-ironcore/networking.ironcore.dev/Network/shoot--feos--fecode/shoot-network/network-canary-001",
+      "type": "network",
+      "provenance": {"sourceId": "canary-ironcore", "environment": "canary", "clusterRole": "central-ironcore", "group": "networking.ironcore.dev", "version": "v1alpha1", "kind": "Network", "namespace": "shoot--feos--fecode", "name": "shoot-network", "uid": "network-canary-001", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "observed-live"},
+      "health": "healthy"
     },
     {
       "key": "canary-ironcore/networking.ironcore.dev/LoadBalancer/shoot--feos--fecode/api/lb-canary-001",
@@ -40,6 +49,28 @@
       "health": "healthy",
       "addresses": ["203.0.113.10"],
       "selector": {"kubernetes.io/cluster": "shoot--feos--fecode"}
+    },
+    {
+      "key": "canary-ironcore/networking.ironcore.dev/LoadBalancerRouting/shoot--feos--fecode/api-routing/routing-canary-001",
+      "type": "load-balancer-routing",
+      "provenance": {"sourceId": "canary-ironcore", "environment": "canary", "clusterRole": "central-ironcore", "group": "networking.ironcore.dev", "version": "v1alpha1", "kind": "LoadBalancerRouting", "namespace": "shoot--feos--fecode", "name": "api-routing", "uid": "routing-canary-001", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "observed-live"},
+      "health": "healthy",
+      "ownerReferences": [{"group": "networking.ironcore.dev", "kind": "LoadBalancer", "namespace": "shoot--feos--fecode", "name": "api", "uid": "lb-canary-001", "fieldPath": ".metadata.ownerReferences"}]
+    },
+    {
+      "key": "canary-ironcore/storage.ironcore.dev/Volume/shoot--feos--fecode/worker-a-0-root/volume-canary-001",
+      "type": "volume",
+      "provenance": {"sourceId": "canary-ironcore", "environment": "canary", "clusterRole": "central-ironcore", "group": "storage.ironcore.dev", "version": "v1alpha1", "kind": "Volume", "namespace": "shoot--feos--fecode", "name": "worker-a-0-root", "uid": "volume-canary-001", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "observed-live"},
+      "health": "healthy",
+      "state": "Available",
+      "references": [{"group": "storage.ironcore.dev", "kind": "VolumePool", "name": "wdf4a", "uid": "volume-pool-canary-a", "fieldPath": ".spec.volumePoolRef.name"}]
+    },
+    {
+      "key": "canary-ironcore/storage.ironcore.dev/VolumePool/_/wdf4a/volume-pool-canary-a",
+      "type": "volume-pool",
+      "provenance": {"sourceId": "canary-ironcore", "environment": "canary", "clusterRole": "central-ironcore", "group": "storage.ironcore.dev", "version": "v1alpha1", "kind": "VolumePool", "name": "wdf4a", "uid": "volume-pool-canary-a", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "observed-live"},
+      "health": "healthy",
+      "labels": {"topology.ironcore.dev/zone": "wdf4a"}
     }
   ]
 }

@@ -12,6 +12,12 @@
   ],
   "resources": [
     {
+      "key": "catalog/core/Zone/_/wdf4a/zone-wdf4a",
+      "type": "zone",
+      "provenance": {"sourceId": "catalog", "environment": "canary", "clusterRole": "catalog", "group": "core", "version": "v1", "kind": "Zone", "name": "wdf4a", "uid": "zone-wdf4a", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "declared-gitops"},
+      "health": "unknown"
+    },
+    {
       "key": "wdf4a/core/PhysicalNode/_/cn-wdf4a-7/node-wdf4a-7",
       "type": "physical-node",
       "provenance": {"sourceId": "wdf4a", "environment": "canary", "clusterRole": "zonal-capi", "group": "core", "version": "v1", "kind": "PhysicalNode", "name": "cn-wdf4a-7", "uid": "node-wdf4a-7", "collectedAt": "2026-11-03T12:00:00Z", "freshness": "fresh", "access": "ok", "evidence": "observed-live"},
