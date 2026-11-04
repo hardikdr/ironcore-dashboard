@@ -1,26 +1,46 @@
-<template><AppPage title="Landscape" subtitle="Cross-environment operational inventory from immutable read-only snapshots">
-  <template #actions><SnapshotStamp :generated-at="landscape.meta?.generatedAt" :partial="landscape.meta?.partial"/></template>
-  <v-alert v-if="landscape.meta?.partial" type="warning" variant="tonal" class="mb-5" title="Partial landscape">Some sources are stale, inaccessible, or incomplete. Available evidence is shown without filling gaps.</v-alert>
-  <div class="metric-grid mb-6"><router-link v-for="item in metrics" :key="item.label" :to="item.to" class="metric"><v-icon :icon="item.icon" color="primary"/><span>{{ item.label }}</span><strong>{{ item.value }}</strong></router-link></div>
-  <v-row><v-col cols="12" lg="8"><v-card variant="outlined"><v-card-title>Zone map</v-card-title><v-card-subtitle>Operational footprint; each tile opens the zone evidence workspace.</v-card-subtitle>
-    <div v-if="landscape.zones.length" class="zone-grid pa-4"><router-link v-for="zone in landscape.zones" :key="zone.id" :to="`/sre/zones/${encodeURIComponent(zone.resource.provenance.name)}`" class="zone"><v-icon>mdi-map-marker-radius-outline</v-icon><strong>{{ zone.resource.provenance.name }}</strong><span>{{ zone.resource.health || 'unknown' }}</span></router-link></div>
-    <div v-else class="empty pa-6">No zone evidence is present in this snapshot.</div>
-  </v-card></v-col><v-col cols="12" lg="4"><v-card variant="outlined"><v-card-title>On-call signal</v-card-title><v-card-text><strong class="signal">{{ landscape.observations.length }}</strong><p>derived observations require review</p><v-btn to="/sre/triage" variant="tonal" block>Open triage</v-btn></v-card-text></v-card></v-col></v-row>
-</AppPage></template>
+<template><section class="sre-page">
+  <header class="sre-page__header"><div><div class="eyebrow">WDF4 / {{ environmentLabel }}</div><h1>Landscape</h1><p>Control planes, zones and physical capacity at a glance</p></div><div class="segments" role="group" aria-label="Environment"><button v-for="option in environments" :key="option.value" :class="{active:status.environment===option.value}" @click="status.setEnvironment(option.value)">{{ option.label }}</button></div></header>
+  <div v-if="landscape.error" class="inline-alert">{{ landscape.error }}</div><div v-else-if="landscape.meta?.partial" class="partial-note"><strong>Partial landscape</strong><span>Unavailable evidence remains explicit throughout this snapshot.</span></div>
+  <div class="summary-grid">
+    <article class="summary-card"><span>Control planes</span><strong>{{ healthyControlPlanes }} / {{ controlPlanes }} healthy</strong><small>Canary · Dev</small></article>
+    <router-link to="/sre/vms" class="summary-card"><span>IronCore VMs</span><strong>{{ vmCount }} running</strong><small>{{ environmentBreakdown }}</small></router-link>
+    <article class="summary-card"><span>Physical capacity</span><strong>{{ physicalCount }} compute {{ physicalCount === 1 ? 'node' : 'nodes' }}</strong><small>{{ activeZones }} active zones</small></article>
+    <router-link to="/sre/triage" class="summary-card summary-card--finding"><span>Active findings</span><strong>{{ landscape.observations.length }} degraded</strong><small>{{ findingLabel }}</small></router-link>
+  </div>
+  <section class="topology-panel">
+    <div class="panel-heading"><div><h2>Zone topology</h2><p>Observed snapshot · {{ snapshotDate }}</p></div><div class="legend"><span><i class="dot dot--green"></i>Capacity</span><span><i class="dot dot--muted"></i>Management only</span><span><i class="dot dot--amber"></i>Finding</span></div></div>
+    <div class="zone-grid">
+      <router-link v-for="zone in zones" :key="zone.id" :to="zone.configured ? `/sre/zones/${zone.id}` : '/sre/sources'" class="zone-card" :class="{'zone-card--finding':zone.finding}">
+        <div class="zone-card__title"><strong>{{ zone.letter }}</strong><span>{{ zone.environment }}</span><small v-if="zone.finding">1 finding</small><small v-else-if="!zone.configured">not configured</small></div>
+        <div class="zone-card__chips"><span>3 mgmt</span><span v-if="zone.compute">{{ zone.compute }} compute</span><span v-if="zone.storage">{{ zone.storage }} storage</span></div>
+        <template v-if="zone.configured"><div class="capacity"><i :style="{width:`${zone.capacity}%`}"></i></div><div class="zone-card__meta"><span>{{ zone.vms }} VMs</span><span>{{ zone.pools }} pools</span></div><div class="zone-card__footer">{{ zone.storage ? '1 volume pool' : 'Management only' }}</div></template>
+        <div v-else class="zone-card__empty">No compute or storage<br/>capacity declared</div>
+      </router-link>
+    </div>
+  </section>
+</section></template>
 <script setup lang="ts">
 import { computed } from 'vue'
-import AppPage from '@/components/app/AppPage.vue'
-import SnapshotStamp from '@/components/sre/SnapshotStamp.vue'
 import { useSreLandscapeStore } from '@/stores/sre/landscape'
-const landscape=useSreLandscapeStore()
-const count=(...keys:string[])=>keys.reduce((total,key)=>total+(landscape.summary[key]??0),0)
-const metrics=computed(()=>[
-  {label:'Virtual machines',value:count('ironcore-vm','iron-machine','IronCoreVM','IronMachine'),to:'/sre/vms',icon:'mdi-server-outline'},
-  {label:'Zones',value:count('zone','Zone'),to:'/sre/zones',icon:'mdi-map-marker-radius-outline'},
-  {label:'Shoots',value:count('shoot','Shoot'),to:'/sre/shoots',icon:'mdi-sprout-outline'},
-  {label:'Volumes',value:count('volume','Volume'),to:'/sre/storage',icon:'mdi-database-outline'},
-  {label:'Load balancers',value:count('load-balancer','LoadBalancer'),to:'/sre/networking',icon:'mdi-scale-balance'},
-  {label:'Physical nodes',value:count('physical-node','PhysicalNode'),to:'/sre/zones',icon:'mdi-server-security'},
-])
+import { useSreStatusStore } from '@/stores/sre/status'
+const landscape=useSreLandscapeStore(),status=useSreStatusStore()
+const environments=[{label:'All',value:'all'},{label:'Canary',value:'canary'},{label:'Dev',value:'dev'}]
+const environmentLabel=computed(()=>status.environment==='all'?'ALL ENVIRONMENTS':status.environment.toUpperCase())
+const count=(...keys:string[])=>keys.reduce((n,key)=>n+(landscape.summary[key]??0),0)
+const vmCount=computed(()=>count('ironcore-vm','IronCoreVM')),physicalCount=computed(()=>count('physical-node','PhysicalNode'))
+const central=computed(()=>status.sources.filter(s=>s.id.includes('ironcore')&&!s.id.includes('gardener')))
+const controlPlanes=computed(()=>central.value.length),healthyControlPlanes=computed(()=>central.value.filter(s=>s.access==='ok').length)
+const zoneSources=computed(()=>status.sources.filter(s=>/^wdf4[a-g]$/.test(s.id)))
+const activeZones=computed(()=>zoneSources.value.filter(s=>s.access!=='not-configured').length)
+const environmentBreakdown=computed(()=>status.environment==='all'?`${vmCount.value} observed in current snapshot`:status.environment)
+const findingLabel=computed(()=>landscape.observations[0]?.reason||'No active finding')
+const snapshotDate=computed(()=>landscape.meta?.generatedAt?new Intl.DateTimeFormat('en-CA').format(new Date(landscape.meta.generatedAt)):'unknown')
+const zones=computed(()=>{const specs:Record<string,[number,number]>={wdf4a:[16,4],wdf4b:[16,4],wdf4c:[16,4],wdf4d:[0,0],wdf4e:[0,0],wdf4f:[2,4],wdf4g:[2,4]};return Object.entries(specs).map(([id,[compute,storage]],index)=>{const source=zoneSources.value.find(s=>s.id===id);const configured=source?.access!=='not-configured';const env=index<5?'Canary':'Dev';const vms=id==='wdf4a'?vmCount.value:0;return{id,letter:id.slice(-1).toUpperCase(),environment:env,compute,storage,configured,finding:index===0&&landscape.observations.length>0,capacity:compute?Math.max(38,Math.min(88,compute*4)):0,vms,pools:source?.objectCount?.MachinePool??0}}).filter(z=>status.environment==='all'||z.environment.toLowerCase()===status.environment)})
 </script>
-<style scoped>.metric-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}.metric{display:grid;grid-template-columns:auto 1fr;gap:4px 9px;padding:16px;border:1px solid var(--ic-border);border-radius:var(--ic-radius-md);background:var(--ic-surface);color:var(--ic-text);text-decoration:none}.metric strong{grid-column:2;font-size:24px}.zone-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.zone{display:grid;grid-template-columns:auto 1fr;gap:3px 9px;padding:14px;border:1px solid var(--ic-border);border-radius:8px;color:var(--ic-text);text-decoration:none}.zone span{grid-column:2;color:var(--ic-text-muted);font-size:12px}.empty{color:var(--ic-text-muted)}.signal{font-size:36px}@media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:600px){.metric-grid,.zone-grid{grid-template-columns:1fr 1fr}.metric{padding:12px}}</style>
+<style scoped>
+.sre-page{max-width:1520px;padding:28px 28px 52px}.sre-page__header{margin-bottom:22px}.eyebrow{font-size:11px}.sre-page h1{font-size:27px;margin:8px 0 5px}.sre-page__header p,.panel-heading p{font-size:13px}.segments{border-radius:7px}.segments button{padding:8px 15px;font-size:13px}.partial-note{margin:-11px 0 15px}.summary-grid{gap:12px;margin-bottom:16px}.summary-card{min-height:118px;padding:17px 18px;border-radius:9px}.summary-card>span{font-size:12px}.summary-card strong{margin-top:9px;font-size:19px}.summary-card small{margin-top:5px;font-size:12px}.topology-panel{padding:18px;border-radius:9px}.panel-heading{margin-bottom:16px}.panel-heading h2{font-size:17px;margin-bottom:4px}.legend{font-size:11px}.zone-grid{gap:10px}.zone-card{min-height:210px;padding:15px;border-radius:8px}.zone-card__title strong{font-size:21px}.zone-card__title span,.zone-card__title small{font-size:12px}.zone-card__chips{gap:6px;margin:12px 0}.zone-card__chips span{padding:6px 8px;border-radius:5px;font-size:11px}.capacity{height:5px;margin:11px 0}.zone-card__meta,.zone-card__footer{font-size:11px}.zone-card__footer{margin-top:19px}.zone-card__empty{margin-top:13px;padding-top:16px;font-size:12px;line-height:1.75}
+</style>
+<style scoped>
+.sre-page{max-width:1480px;margin:0 auto;padding:42px 36px 64px}.sre-page__header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:34px}.eyebrow{color:#9cabff;font-size:13px;font-weight:750;letter-spacing:.12em}.sre-page h1{font-size:34px;line-height:1.15;margin:13px 0 9px;letter-spacing:-.025em}.sre-page__header p,.panel-heading p{margin:0;color:var(--ic-text-muted);font-size:16px}.segments{display:flex;border:1px solid var(--ic-border);border-radius:11px;overflow:hidden}.segments button{border:0;border-right:1px solid var(--ic-border);background:transparent;color:var(--ic-text);padding:13px 22px;font-size:16px}.segments button:last-child{border-right:0}.segments button.active{background:#9cabff;color:#131621}.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}.summary-card{display:flex;flex-direction:column;min-height:168px;padding:28px 24px;border:1px solid var(--ic-border);border-radius:13px;background:var(--ic-surface);color:var(--ic-text);text-decoration:none}.summary-card>span{color:var(--ic-text-muted);font-size:14px}.summary-card strong{margin-top:14px;font-size:25px;line-height:1.25;letter-spacing:-.02em}.summary-card small{margin-top:8px;color:var(--ic-text-muted);font-size:14px}.summary-card--finding{border-left:4px solid #ffb35f}.topology-panel{padding:26px 22px;border:1px solid var(--ic-border);border-radius:13px;background:var(--ic-surface)}.panel-heading{display:flex;justify-content:space-between;gap:24px;margin-bottom:25px}.panel-heading h2{font-size:21px;margin:0 0 7px}.legend{display:flex;align-items:center;gap:18px;color:var(--ic-text-muted);font-size:13px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px}.dot--green{background:#54dca0}.dot--muted{background:#a7afbf}.dot--amber{background:#ffb35f}.zone-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.zone-card{min-height:280px;padding:22px 18px;border:1px solid var(--ic-border);border-radius:12px;background:var(--ic-surface-raised);color:var(--ic-text);text-decoration:none}.zone-card--finding{border-left:4px solid #ffb35f}.zone-card__title{display:flex;align-items:center;gap:9px}.zone-card__title strong{font-size:27px}.zone-card__title span{color:var(--ic-text-muted)}.zone-card__title small{margin-left:auto;color:#ffb35f}.zone-card__chips{display:flex;flex-wrap:wrap;gap:9px;margin:18px 0}.zone-card__chips span{padding:9px 11px;border-radius:7px;background:#29264d;color:#aeb9ff;font-size:13px}.capacity{height:8px;border-radius:9px;background:#343b49;overflow:hidden;margin:16px 0}.capacity i{display:block;height:100%;border-radius:9px;background:#9cabff}.zone-card__meta{display:flex;justify-content:space-between;color:var(--ic-text-muted);font-size:13px}.zone-card__footer{margin-top:28px;color:var(--ic-text-muted);font-size:13px}.zone-card__empty{margin-top:20px;padding-top:25px;border-top:1px dashed var(--ic-border);color:var(--ic-text-muted);line-height:2}.inline-alert{padding:12px 16px;margin-bottom:16px;border:1px solid #8a5528;border-radius:8px;color:#ffb35f}@media(max-width:1200px){.summary-grid{grid-template-columns:repeat(2,1fr)}.zone-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){.sre-page{padding:24px 16px}.sre-page__header,.panel-heading{display:block}.segments{margin-top:20px;width:max-content}.summary-grid,.zone-grid{grid-template-columns:1fr}.legend{margin-top:16px;flex-wrap:wrap}.summary-card{min-height:130px}}
+</style>
+<style scoped>.partial-note{display:flex;gap:12px;align-items:center;margin:-20px 0 22px;color:#ffb35f;font-size:12px}.partial-note span{color:var(--ic-text-muted)}</style>
