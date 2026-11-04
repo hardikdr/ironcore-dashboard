@@ -16,10 +16,10 @@ export const useSreStatusStore = defineStore('sre-status', () => {
     loading.value = true
     error.value = null
     try {
-      const [status, sourceList] = await Promise.all([sreApi.status(signal), sreApi.sources(signal)])
+      const status = await sreApi.status(signal)
       generation.value = status.data.generation
-      sources.value = sourceList.data
-      meta.value = sourceList.meta
+      sources.value = status.meta.sources
+      meta.value = status.meta
     } catch (cause) {
       if ((cause as Error).name !== 'AbortError') error.value = cause instanceof Error ? cause.message : 'SRE status unavailable'
     } finally { loading.value = false }

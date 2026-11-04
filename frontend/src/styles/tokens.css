@@ -20,6 +20,18 @@
 }
 
 .v-theme--dark {
+  --ic-canvas: #111318;
+  --ic-surface: #191c23;
+  --ic-surface-raised: #222630;
+  --ic-border: #343944;
+  --ic-text: #f1f5f9;
+  --ic-text-muted: #aab2c0;
+  --ic-focus: #a5b4fc;
+}
+
+/* Preferred SRE palette is isolated from the existing User Console. */
+.sre-console.v-theme--dark,
+.sre-console .v-theme--dark {
   --ic-canvas: #0f1117;
   --ic-surface: #171b23;
   --ic-surface-raised: #1c212b;

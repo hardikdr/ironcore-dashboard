@@ -3,7 +3,7 @@
 import { computed } from 'vue'
 import type { SreGraph,SreResource } from '@/api/sre'
 const props=defineProps<{ graph:SreGraph; rootKey:string }>()
-const rows=computed(()=>props.graph.relations.map(relation=>{const outgoing=relation.from===props.rootKey,key=outgoing?relation.to:relation.from;return{relation,direction:outgoing?'outgoing':'incoming',resource:props.graph.resources.find(resource=>resource.key===key)}}))
+const rows=computed(()=>props.graph.relations.filter(relation=>relation.from===props.rootKey||relation.to===props.rootKey).map(relation=>{const outgoing=relation.from===props.rootKey,key=outgoing?relation.to:relation.from;return{relation,direction:outgoing?'outgoing':'incoming',resource:props.graph.resources.find(resource=>resource.key===key)}}))
 function opaqueId(key:string){const bytes=new TextEncoder().encode(key);let binary='';bytes.forEach(byte=>binary+=String.fromCharCode(byte));return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function resourceRoute(resource?:SreResource){if(!resource)return'/sre/landscape';const id=opaqueId(resource.key),kind=resource.provenance.kind.toLowerCase();if(kind.includes('vm'))return`/sre/vms/${id}`;if(kind==='shoot')return`/sre/shoots/${id}`;if(kind.includes('node'))return`/sre/nodes/${id}`;if(kind==='zone')return`/sre/zones/${encodeURIComponent(resource.provenance.name)}`;return`/sre/dependencies/${id}`}
 </script>

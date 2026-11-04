@@ -64,3 +64,10 @@ authorization, destructive operations, cluster changes, and external integration
 Stop if tests repeatedly fail, requirements conflict, credentials are needed, or the
 working tree contains unrelated changes that overlap the task.
 
+
+## Local branch workflow (user preference)
+
+Work in the main repository directory on an ordinary local feature branch. Do not
+create new worktrees. Keep all changes and commits local. Do not merge into main
+or push without explicit user instruction. Preserve existing worktrees as archives
+unless the user separately authorizes their removal. See docs/local-console-development.md.
